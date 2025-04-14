@@ -38,8 +38,26 @@ def save_data(data, file_path):
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
+        # Add timestamp to saved data if it's a dictionary
+        if isinstance(data, dict) and 'metadata' not in data:
+            data['metadata'] = {
+                'last_updated': datetime.now().isoformat(),
+                'record_count': len(data.get('data', [])) if 'data' in data else 0
+            }
+        elif isinstance(data, list) and data:
+            # If it's a list, we'll wrap it in a dict with metadata
+            data = {
+                'metadata': {
+                    'last_updated': datetime.now().isoformat(),
+                    'record_count': len(data)
+                },
+                'data': data
+            }
+        
         with open(file_path, 'w') as f:
             json.dump(data, f, indent=2)
+        
+        st.success(f"Successfully saved data to {file_path}")
         return True
     except Exception as e:
         st.error(f"Error saving data: {str(e)}")

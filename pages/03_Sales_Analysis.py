@@ -93,13 +93,33 @@ with tab1:
         st.metric("Profit Margin", f"{sales_analysis['avg_profit_margin']:.1f}%")
     
     with col4:
-        # Calculate average daily revenue
-        if period_days[analysis_period] > 0:
-            avg_daily = sales_analysis['total_revenue'] / min(period_days[analysis_period], 
-                                                          len(set(pd.to_datetime([s.get('date') for s in st.session_state.sales]).date)))
-            st.metric("Avg. Daily Revenue", f"${avg_daily:.2f}")
-        else:
+        # Calculate average daily revenue with safeguards against division by zero
+        try:
+            if 'sales' in st.session_state and st.session_state.sales:
+                # Get unique dates in the sales data
+                unique_dates = set()
+                for s in st.session_state.sales:
+                    if s.get('date'):
+                        try:
+                            date_obj = pd.to_datetime(s.get('date')).date()
+                            unique_dates.add(date_obj)
+                        except:
+                            pass
+                
+                # Calculate days for the average
+                num_days = min(period_days[analysis_period], len(unique_dates)) if unique_dates else 1
+                
+                # Make sure we don't divide by zero
+                if num_days > 0 and sales_analysis['total_revenue'] > 0:
+                    avg_daily = sales_analysis['total_revenue'] / num_days
+                    st.metric("Avg. Daily Revenue", f"${avg_daily:.2f}")
+                else:
+                    st.metric("Avg. Daily Revenue", "$0.00")
+            else:
+                st.metric("Avg. Daily Revenue", "$0.00")
+        except Exception as e:
             st.metric("Avg. Daily Revenue", "$0.00")
+            st.warning(f"Could not calculate average daily revenue: {e}")
     
     # Display sales over time
     st.subheader("Sales Trend")
