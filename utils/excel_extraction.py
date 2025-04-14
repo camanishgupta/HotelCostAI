@@ -632,33 +632,125 @@ def extract_sales_from_excel(file_path):
         list: Extracted sales records
     """
     try:
-        # Read the Excel file
+        st.info(f"Attempting to extract sales data from {os.path.basename(file_path)}")
+        
+        # Read the Excel file with improved error handling
         df = safe_read_excel(file_path)
         if df is None or df.empty:
+            st.error(f"Could not read file or file is empty: {os.path.basename(file_path)}")
             return []
             
+        # Display data preview for debugging
+        st.write("Sample data preview for sales extraction:")
+        st.dataframe(df.head(3))
+        
+        # Clean up the dataframe - remove completely empty rows and columns
+        df = df.dropna(how='all').reset_index(drop=True)  # Remove empty rows
+        df = df.loc[:, ~df.isna().all()].reset_index(drop=True)  # Remove empty columns
+        
         # Try to determine the structure
         columns = [str(col).lower() for col in df.columns]
+        st.write("Detected columns:", columns)
         
-        # Define target fields and potential column matches
+        # Define target fields and potential column matches - expanded for better matching
         field_matches = {
-            'date': ['date', 'sale date', 'transaction date', 'order date', 'day'],
-            'item_name': ['item', 'product', 'name', 'description', 'item name', 'product name'],
-            'quantity': ['quantity', 'qty', 'amount', 'volume', 'count', 'sold', 'units sold'],
-            'revenue': ['revenue', 'sales', 'amount', 'total', 'price', 'total price', 'sales amount', 'income'],
-            'cost': ['cost', 'cogs', 'cost of goods', 'expense', 'total cost']
+            'date': ['date', 'sale date', 'transaction date', 'order date', 'day', 'period', 'month', 'sale period',
+                    'week', 'year', 'transaction time', 'time', 'datetime'],
+            'item_name': ['item', 'product', 'name', 'description', 'item name', 'product name', 'menu item',
+                         'dish', 'article', 'food item', 'merchandise', 'goods', 'service', 'sale item'],
+            'quantity': ['quantity', 'qty', 'amount', 'volume', 'count', 'sold', 'units sold', 'units', 'pieces',
+                        'pcs', 'number', 'num', 'unit sold', 'qty sold'],
+            'revenue': ['revenue', 'sales', 'amount', 'total', 'price', 'total price', 'sales amount', 'income',
+                       'sale amount', 'sale value', 'value', 'sales revenue', 'total sales', 'gross sales'],
+            'cost': ['cost', 'cogs', 'cost of goods', 'expense', 'total cost', 'unit cost', 'cost price',
+                    'material cost', 'production cost', 'purchase cost', 'cost amount']
         }
         
-        # Create mapping of our fields to Excel columns
+        # Create mapping of our fields to Excel columns - enhanced for better matching
         mapping = {}
+        mapped_columns = []
+        
+        # First pass - exact matches
         for our_field, possible_matches in field_matches.items():
             for i, col in enumerate(columns):
-                if any(match in col for match in possible_matches):
+                if col in possible_matches:
                     mapping[our_field] = df.columns[i]
+                    mapped_columns.append(col)
                     break
         
+        # Second pass - partial matches if we didn't find exact matches
+        for our_field, possible_matches in field_matches.items():
+            if our_field in mapping:
+                continue  # Skip if already mapped
+                
+            for i, col in enumerate(columns):
+                if col in mapped_columns:
+                    continue  # Skip if column already mapped
+                    
+                if any(match in col for match in possible_matches):
+                    mapping[our_field] = df.columns[i]
+                    mapped_columns.append(col)
+                    break
+        
+        # Display the mapping for debugging
+        st.write("Column mapping for sales data:")
+        for our_field, excel_col in mapping.items():
+            st.write(f"- {our_field}: {excel_col}")
+        
+        # Special case for ABGN files - detect by filename
+        filename = os.path.basename(file_path).lower()
+        if 'sale' in filename and 'item' in filename and 'abgn' in filename:
+            st.write("Detected ABGN Sales file format - using special extraction")
+            # Try to find typical columns in ABGN sales files
+            potential_item_cols = []
+            potential_qty_cols = []
+            potential_revenue_cols = []
+            
+            # Look for descriptive columns
+            for i, col in enumerate(df.columns):
+                col_str = str(col).lower()
+                if any(term in col_str for term in ['item', 'name', 'description', 'menu', 'dish']):
+                    potential_item_cols.append((i, col))
+                elif any(term in col_str for term in ['quantity', 'qty', 'count', 'number']):
+                    potential_qty_cols.append((i, col))
+                elif any(term in col_str for term in ['total', 'amount', 'revenue', 'sales', 'price']):
+                    potential_revenue_cols.append((i, col))
+            
+            # Use the first columns found as mapping
+            if potential_item_cols:
+                mapping['item_name'] = potential_item_cols[0][1]
+            if potential_qty_cols:
+                mapping['quantity'] = potential_qty_cols[0][1]
+            if potential_revenue_cols:
+                mapping['revenue'] = potential_revenue_cols[0][1]
+            
+            # Hard code the date for ABGN file - extract from filename
+            # Example: "ABGN Sale by Items Feb-2025.xlsx" -> "Feb 2025"
+            sale_date = None
+            date_match = re.search(r'([a-zA-Z]{3})[- ](\d{4})', filename)
+            if date_match and date_match.groups() and len(date_match.groups()) >= 2:
+                try:
+                    month_str = date_match.group(1)
+                    year_str = date_match.group(2)
+                    
+                    # Map month name to number
+                    month_map = {
+                        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                        'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                    }
+                    month_num = month_map.get(month_str.lower(), 1)  # Default to January if not found
+                    
+                    # Create date and convert to ISO format
+                    sale_date = datetime(int(year_str), month_num, 15).isoformat()  # Middle of the month
+                    st.write(f"Extracted date from filename: {sale_date}")
+                except Exception as date_err:
+                    st.warning(f"Could not parse date from filename: {str(date_err)}")
+                    sale_date = datetime.now().isoformat()  # Use current date as fallback
+        
         # If we couldn't map critical fields, try AI mapping
-        if 'item_name' not in mapping or 'quantity' not in mapping:
+        if ('item_name' not in mapping or 'quantity' not in mapping) and not ('abgn' in filename.lower()):
+            st.warning("Critical fields not mapped. Attempting AI-based mapping...")
+            
             # Convert to dict for AI processing
             sample_data = df.head(5).to_dict()
             target_schema = {
@@ -675,74 +767,179 @@ def extract_sales_from_excel(file_path):
                 for our_field, excel_col in ai_mapping.items():
                     if excel_col is not None:
                         mapping[our_field] = excel_col
+                        st.write(f"AI mapped {our_field} to {excel_col}")
         
         # Process the data using the mapping
         sales_records = []
+        skipped_items = 0
         
-        for _, row in df.iterrows():
-            record = SalesRecord()
-            
-            # Extract mapped fields
-            for our_field, excel_col in mapping.items():
-                if excel_col in row:
-                    value = row[excel_col]
-                    
-                    # Handle NaN
-                    if pd.isna(value):
-                        continue
-                    
-                    # Convert to appropriate type
-                    if our_field == 'date':
-                        try:
-                            if isinstance(value, str):
-                                # Try different date formats
-                                for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d']:
+        # Skip header rows if they exist
+        start_row = 0
+        for idx, row in df.iterrows():
+            row_values = [str(val).lower() for val in row.values if not pd.isna(val)]
+            header_keywords = ['date', 'item', 'product', 'name', 'quantity', 'qty', 'amount', 'total', 'sales']
+            if any(keyword in ' '.join(row_values) for keyword in header_keywords):
+                start_row = idx + 1
+                break
+        
+        st.info(f"Starting sales data extraction from row {start_row}")
+        
+        # Process each row
+        for idx, row in df.iloc[start_row:].iterrows():
+            try:
+                # Skip rows that are likely headers or completely empty
+                if all(pd.isna(val) for val in row.values):
+                    continue
+                
+                record = SalesRecord()
+                has_data = False
+                
+                # Set date from ABGN file analysis if available
+                if sale_date:
+                    record.date = sale_date
+                    has_data = True
+                
+                # Extract mapped fields
+                for our_field, excel_col in mapping.items():
+                    if excel_col in row:
+                        value = row[excel_col]
+                        
+                        # Handle NaN
+                        if pd.isna(value):
+                            continue
+                        
+                        # Convert to appropriate type
+                        if our_field == 'date':
+                            try:
+                                if isinstance(value, str):
+                                    # Try to find year/month in string
+                                    if re.search(r'(\d{4})[/\-](\d{1,2})', value):
+                                        # Looks like a year-month format
+                                        year_match = re.search(r'(\d{4})', value)
+                                        month_match = re.search(r'[/\-](\d{1,2})', value)
+                                        
+                                        if year_match and month_match:
+                                            year = year_match.group(1)
+                                            month = month_match.group(1)
+                                            value = f"{year}-{month}-15"  # Middle of month
+                                        
+                                    # Try different date formats
+                                    for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d']:
+                                        try:
+                                            parsed_date = datetime.strptime(value, fmt)
+                                            value = parsed_date.isoformat()
+                                            break
+                                        except:
+                                            pass
+                                elif isinstance(value, (int, float)):
+                                    # Might be an Excel date number
                                     try:
-                                        value = datetime.strptime(value, fmt).isoformat()
-                                        break
+                                        value = pd.Timestamp.fromordinal(
+                                            datetime(1900, 1, 1).toordinal() + int(value) - 2
+                                        ).isoformat()
                                     except:
                                         pass
-                            else:
-                                # Assume pandas converted it to datetime or Timestamp
-                                value = pd.Timestamp(value).isoformat()
-                        except:
-                            value = datetime.now().isoformat()
-                    elif our_field in ['quantity', 'revenue', 'cost']:
-                        try:
-                            value = float(value)
-                        except:
-                            continue
-                    else:
-                        value = str(value)
+                                else:
+                                    # Assume pandas converted it to datetime or Timestamp
+                                    try:
+                                        value = pd.Timestamp(value).isoformat()
+                                    except:
+                                        pass
+                                        
+                                has_data = True
+                            except:
+                                record.date = datetime.now().isoformat()
+                        elif our_field in ['quantity', 'revenue', 'cost']:
+                            try:
+                                if isinstance(value, str):
+                                    # Clean up the string - remove currency symbols, commas, etc.
+                                    value = re.sub(r'[^\d\.\-\,]', '', value).replace(',', '')
+                                value = float(value) if value else 0.0
+                                has_data = True
+                            except:
+                                if our_field == 'quantity':
+                                    record.quantity = 1  # Default
+                                elif our_field == 'revenue':
+                                    record.revenue = 0
+                                elif our_field == 'cost':
+                                    record.cost = 0
+                                continue
+                        else:
+                            if value:
+                                value = str(value).strip()
+                                has_data = True
+                        
+                        # Set attribute
+                        setattr(record, our_field, value)
+                
+                # Look for data in unmapped columns for item_name if missing
+                if not record.item_name and has_data:
+                    for col in df.columns:
+                        if col not in mapping.values():
+                            val = row[col]
+                            if not pd.isna(val) and isinstance(val, str) and len(val.strip()) > 2:
+                                record.item_name = val.strip()
+                                break
+                
+                # Skip if no data or no item name found
+                if not has_data or not record.item_name:
+                    skipped_items += 1
+                    continue
+                
+                # Set default date if missing
+                if not record.date:
+                    record.date = datetime.now().isoformat()
+                
+                # Ensure quantity is at least 1
+                if record.quantity == 0:
+                    record.quantity = 1
+                
+                # If revenue is missing but we have quantity, estimate it
+                if record.revenue == 0 and record.quantity > 0:
+                    # Try to find revenue in other numeric columns
+                    for col in df.columns:
+                        if col not in mapping.values():
+                            try:
+                                val = row[col]
+                                if not pd.isna(val) and not isinstance(val, str):
+                                    num_val = float(val)
+                                    if num_val > 0 and num_val < 1000000:  # Reasonable revenue range
+                                        record.revenue = num_val
+                                        break
+                            except:
+                                continue
                     
-                    # Set attribute
-                    setattr(record, our_field, value)
+                    # If still not found, use a default estimate
+                    if record.revenue == 0:
+                        record.revenue = record.quantity * 10.0
+                
+                # If cost is missing but we have revenue, estimate it
+                if record.cost == 0 and record.revenue > 0:
+                    # Assume a standard profit margin of 70%
+                    record.cost = record.revenue * 0.3
+                
+                # Recalculate profit fields
+                record.profit = record.revenue - record.cost
+                record.profit_margin = (record.profit / record.revenue) * 100 if record.revenue > 0 else 0
+                
+                # Set timestamp
+                record.imported_at = datetime.now().isoformat()
+                
+                # Add to list
+                sales_records.append(record.to_dict())
+                
+                # Debug info for first few items
+                if len(sales_records) <= 3:
+                    st.write(f"Extracted sales record {len(sales_records)}: {record.item_name}, Qty: {record.quantity}, Revenue: {record.revenue}")
             
-            # Skip if no item name or quantity
-            if not record.item_name or record.quantity == 0:
+            except Exception as row_error:
+                st.warning(f"Error processing sales row {idx}: {str(row_error)}")
+                skipped_items += 1
                 continue
-                
-            # If revenue is missing but we have quantity, estimate it
-            if record.revenue == 0 and record.quantity > 0:
-                # Assume a default revenue per item
-                record.revenue = record.quantity * 10.0
-                
-            # If cost is missing but we have revenue, estimate it
-            if record.cost == 0 and record.revenue > 0:
-                # Assume a standard profit margin of 70%
-                record.cost = record.revenue * 0.3
-                
-            # Recalculate profit fields
-            record.profit = record.revenue - record.cost
-            record.profit_margin = (record.profit / record.revenue) * 100 if record.revenue > 0 else 0
-            
-            # Set timestamp
-            record.imported_at = datetime.now().isoformat()
-            
-            # Add to list
-            sales_records.append(record.to_dict())
         
+        st.success(f"Successfully extracted {len(sales_records)} sales records. Skipped {skipped_items} rows.")
         return sales_records
+    
     except Exception as e:
         st.error(f"Error extracting sales: {str(e)}")
         return []
@@ -765,18 +962,59 @@ def batch_process_directory(directory):
     }
     
     try:
+        # Check if the directory exists
+        if not os.path.exists(directory):
+            st.warning(f"Directory {directory} does not exist. Will try attached_assets instead.")
+            directory = "attached_assets"  # Try the attached_assets folder as fallback
+            
+            # If that still doesn't exist, return empty results
+            if not os.path.exists(directory):
+                st.error(f"Directory {directory} does not exist either.")
+                results['errors'].append(f"Directory {directory} does not exist")
+                return results
+        
         # Get all Excel files in the directory
         files = [os.path.join(directory, f) for f in os.listdir(directory) 
                  if f.endswith('.xlsx') or f.endswith('.xls')]
                  
         st.info(f"Found {len(files)} Excel files in {directory}")
         
+        if len(files) == 0:
+            st.warning(f"No Excel files found in {directory}.")
+            results['errors'].append(f"No Excel files found in {directory}")
+            return results
+        
+        # Process each file
         for file_path in files:
             try:
                 file_name = os.path.basename(file_path)
-                st.write(f"Processing file: {file_name}")
+                st.subheader(f"Processing file: {file_name}")
                 
-                # First try to extract recipes, which is our primary focus
+                # First check if this is an ABGN file by name
+                if 'abgn' in file_name.lower():
+                    # Handle special case for ABGN files
+                    if 'sale' in file_name.lower() or 'sales' in file_name.lower():
+                        st.info("Detected ABGN Sales file, attempting direct sales extraction...")
+                        sales = extract_sales_from_excel(file_path)
+                        if sales:
+                            st.success(f"Found {len(sales)} sales records in {file_name}")
+                            results['sales'].extend(sales)
+                            continue
+                        else:
+                            st.warning(f"Failed to extract sales data from ABGN Sales file {file_name}")
+                    
+                    elif 'store' in file_name.lower() or 'item receipt' in file_name.lower():
+                        st.info("Detected ABGN inventory file, attempting direct inventory extraction...")
+                        inventory = extract_inventory_from_excel(file_path)
+                        if inventory:
+                            st.success(f"Found {len(inventory)} inventory items in {file_name}")
+                            results['inventory'].extend(inventory)
+                            continue
+                        else:
+                            st.warning(f"Failed to extract inventory data from ABGN file {file_name}")
+                
+                # Now try the recipe extraction, which is generally our primary focus
+                st.info(f"Attempting recipe extraction for {file_name}...")
                 recipes = extract_recipes_from_excel(file_path)
                 if recipes:
                     st.success(f"Found {len(recipes)} recipes in {file_name}")
@@ -784,10 +1022,12 @@ def batch_process_directory(directory):
                     continue
                 
                 # If no recipes found, try detecting and extracting other data types
+                st.info(f"No recipes found. Analyzing file type for {file_name}...")
                 file_type = detect_file_type(file_path)
                 st.write(f"Detected file type: {file_type}")
                 
                 if file_type == 'inventory':
+                    st.info(f"Attempting inventory extraction for {file_name}...")
                     inventory = extract_inventory_from_excel(file_path)
                     if inventory:
                         st.success(f"Found {len(inventory)} inventory items in {file_name}")
@@ -797,6 +1037,7 @@ def batch_process_directory(directory):
                         results['errors'].append(f"No inventory data found in {file_path}")
                 
                 elif file_type == 'sales':
+                    st.info(f"Attempting sales extraction for {file_name}...")
                     sales = extract_sales_from_excel(file_path)
                     if sales:
                         st.success(f"Found {len(sales)} sales records in {file_name}")
@@ -807,14 +1048,18 @@ def batch_process_directory(directory):
                 
                 else:
                     # If type is unknown, try all extractors
-                    st.write("Trying all extractors for unknown file type...")
+                    st.write(f"Unknown file type. Trying all extractors for {file_name}...")
                     
+                    # Try inventory extraction first
+                    st.info(f"Attempting inventory extraction for {file_name}...")
                     inventory = extract_inventory_from_excel(file_path)
                     if inventory:
                         st.success(f"Found {len(inventory)} inventory items in {file_name}")
                         results['inventory'].extend(inventory)
                         continue
                     
+                    # Then try sales extraction
+                    st.info(f"Attempting sales extraction for {file_name}...")
                     sales = extract_sales_from_excel(file_path)
                     if sales:
                         st.success(f"Found {len(sales)} sales records in {file_name}")
@@ -833,6 +1078,46 @@ def batch_process_directory(directory):
         st.write(f"Inventory items extracted: {len(results['inventory'])}")
         st.write(f"Sales records extracted: {len(results['sales'])}")
         st.write(f"Errors encountered: {len(results['errors'])}")
+        
+        # If we found any data, add a shortcut to save it
+        if results['recipes'] or results['inventory'] or results['sales']:
+            st.success("Data extraction completed successfully!")
+            
+            # Display the data to save
+            if results['recipes']:
+                st.info(f"Found {len(results['recipes'])} recipes. Go to the Recipe Management tab to save them.")
+                # Initialize session state if needed
+                if 'recipes' not in st.session_state:
+                    st.session_state.recipes = []
+                # Add to session state
+                st.session_state.extraction_results = {
+                    'type': 'recipe',
+                    'data': results['recipes']
+                }
+                
+            if results['inventory']:
+                st.info(f"Found {len(results['inventory'])} inventory items. Go to the Inventory Management tab to save them.")
+                # Initialize session state if needed
+                if 'inventory' not in st.session_state:
+                    st.session_state.inventory = []
+                # Add to session state
+                st.session_state.extraction_results = {
+                    'type': 'inventory',
+                    'data': results['inventory']
+                }
+                
+            if results['sales']:
+                st.info(f"Found {len(results['sales'])} sales records. Go to the Sales Analysis tab to save them.")
+                # Initialize session state if needed
+                if 'sales' not in st.session_state:
+                    st.session_state.sales = []
+                # Add to session state
+                st.session_state.extraction_results = {
+                    'type': 'sales',
+                    'data': results['sales']
+                }
+        else:
+            st.warning("No usable data was extracted from any of the files.")
         
         return results
     except Exception as e:
