@@ -944,6 +944,268 @@ def extract_sales_from_excel(file_path):
         st.error(f"Error extracting sales: {str(e)}")
         return []
 
+def extract_abgn_inventory(file_path):
+    """
+    Extract inventory data specifically from ABGN One Line Store format Excel files
+    
+    Args:
+        file_path (str): Path to the ABGN One Line Store Excel file
+        
+    Returns:
+        list: Extracted inventory items
+    """
+    try:
+        # Try different engines to handle various Excel formats
+        dfs = []
+        errors = []
+        
+        try:
+            df = pd.read_excel(file_path, engine='openpyxl')
+            dfs.append(df)
+        except Exception as e:
+            errors.append(f"openpyxl error: {str(e)}")
+            
+        try:
+            df = pd.read_excel(file_path, engine='xlrd')
+            dfs.append(df)
+        except Exception as e:
+            errors.append(f"xlrd error: {str(e)}")
+        
+        # Use the first successful DataFrame or raise an error
+        if dfs:
+            df = dfs[0]
+        else:
+            st.error(f"Failed to read Excel file: {', '.join(errors)}")
+            return []
+        
+        # Find the header row - ABGN One Line Store format has standard header patterns
+        header_row = -1
+        for i in range(min(20, len(df))):
+            row = df.iloc[i]
+            row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+            if "item" in row_text and "name" in row_text and "uom" in row_text:
+                header_row = i
+                st.info(f"Found header row at row {i}")
+                break
+        
+        if header_row < 0:
+            # Try alternative header pattern
+            for i in range(min(20, len(df))):
+                row = df.iloc[i]
+                row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+                if "item" in row_text and any(term in row_text for term in ["opb.bal", "receipts", "issues"]):
+                    header_row = i
+                    st.info(f"Found alternative header row at row {i}")
+                    break
+        
+        # If still no header found, use default positions
+        if header_row < 0:
+            st.warning("Could not find header row in ABGN One Line Store file, using default positions")
+            header_row = 1  # Common position in ABGN format
+        
+        # Determine column mappings based on header
+        header = df.iloc[header_row]
+        
+        # Initialize column indices
+        item_code_col = None
+        item_name_col = None
+        unit_col = None
+        opening_balance_col = None
+        closing_balance_col = None
+        value_col = None
+        
+        # Look for column names in header
+        for i, col_val in enumerate(header):
+            if pd.isna(col_val):
+                continue
+                
+            col_text = str(col_val).lower()
+            
+            if col_text == "item":
+                item_code_col = i
+            elif "name" in col_text or "description" in col_text:
+                item_name_col = i
+            elif "uom" in col_text or "unit" in col_text:
+                unit_col = i
+            elif "opb.bal" in col_text or "opening" in col_text:
+                opening_balance_col = i
+            elif "clb.bal" in col_text or "closing" in col_text:
+                closing_balance_col = i
+            elif "value" in col_text and "clb" in col_text:
+                value_col = i
+        
+        # If columns not found, use default positions
+        if item_code_col is None:
+            item_code_col = 0  # Usually first column
+            
+        if item_name_col is None:
+            item_name_col = 1  # Usually second column
+            
+        if unit_col is None:
+            unit_col = item_name_col  # Sometimes combined with name column
+            
+        if opening_balance_col is None:
+            opening_balance_col = 2  # Common position
+            
+        if closing_balance_col is None:
+            closing_balance_col = -1  # Often one of the last columns
+            for i in range(len(header) - 1, 2, -1):
+                if "bal" in str(header.iloc[i]).lower():
+                    closing_balance_col = i
+                    break
+            if closing_balance_col < 0:
+                closing_balance_col = len(header) - 2  # Default to second-to-last column
+                
+        if value_col is None:
+            value_col = len(header) - 1  # Usually last column
+            
+        st.info(f"Using columns: Item Code={item_code_col}, Name={item_name_col}, Unit={unit_col}, " +
+               f"Opening={opening_balance_col}, Closing={closing_balance_col}, Value={value_col}")
+        
+        # Process inventory items
+        inventory_items = []
+        skipped_rows = 0
+        group_category = "Uncategorized"
+        
+        for i in range(header_row + 1, len(df)):
+            try:
+                row = df.iloc[i]
+                
+                # Skip empty rows
+                if all(pd.isna(val) for val in row.values):
+                    skipped_rows += 1
+                    continue
+                
+                # Check if this is a group/category header (common in ABGN format)
+                first_cell = row.iloc[0] if len(row) > 0 else None
+                if isinstance(first_cell, str) and any(term in first_cell.lower() for term in ["group", "total", "____"]):
+                    # Update current category
+                    if "total" not in first_cell.lower():
+                        group_category = first_cell.strip()
+                    skipped_rows += 1
+                    continue
+                
+                # Get item code
+                item_code = ""
+                if item_code_col < len(row) and not pd.isna(row.iloc[item_code_col]):
+                    item_code = str(row.iloc[item_code_col]).strip()
+                
+                # Some ABGN formats have item code on one row and name/details on next
+                if "(" in item_code and ")" in item_code:
+                    # This looks like an item code row with format like "20900023 (1)"
+                    item_code = item_code.split("(")[0].strip()
+                    # Next row may contain the item name and other details
+                    if i + 1 < len(df):
+                        next_row = df.iloc[i + 1]
+                        
+                        # If next row starts with empty cells, it's likely the details row
+                        if pd.isna(next_row.iloc[0]) and not pd.isna(next_row.iloc[unit_col]):
+                            # Extract unit and stock details from next row
+                            unit = str(next_row.iloc[unit_col]).strip() if unit_col < len(next_row) else ""
+                            
+                            closing_bal = 0
+                            if closing_balance_col < len(next_row) and not pd.isna(next_row.iloc[closing_balance_col]):
+                                try:
+                                    closing_bal = float(next_row.iloc[closing_balance_col])
+                                except:
+                                    pass
+                            
+                            value = 0
+                            if value_col < len(next_row) and not pd.isna(next_row.iloc[value_col]):
+                                try:
+                                    value = float(next_row.iloc[value_col])
+                                except:
+                                    pass
+                            
+                            # Get item name from current row or use code if not available
+                            item_name = ""
+                            if item_name_col < len(row) and not pd.isna(row.iloc[item_name_col]):
+                                item_name = str(row.iloc[item_name_col]).strip()
+                            else:
+                                item_name = item_code
+                            
+                            # Calculate unit price
+                            unit_price = value / closing_bal if closing_bal > 0 else 0
+                            
+                            # Create inventory item
+                            inventory_items.append({
+                                "item_code": item_code,
+                                "name": item_name,
+                                "category": group_category,
+                                "unit": unit,
+                                "stock_level": closing_bal,
+                                "price": unit_price,
+                                "value": value,
+                                "imported_at": datetime.now().isoformat()
+                            })
+                            
+                            # Skip next row since we already processed it
+                            i += 1
+                            continue
+                
+                # Process standard row format
+                # Get item name
+                item_name = ""
+                if item_name_col < len(row) and not pd.isna(row.iloc[item_name_col]):
+                    item_name = str(row.iloc[item_name_col]).strip()
+                    
+                # Skip if no item code or name
+                if not item_code and not item_name:
+                    skipped_rows += 1
+                    continue
+                
+                # Get unit
+                unit = ""
+                if unit_col < len(row) and not pd.isna(row.iloc[unit_col]):
+                    unit = str(row.iloc[unit_col]).strip()
+                
+                # Get closing balance
+                closing_bal = 0
+                if closing_balance_col < len(row) and not pd.isna(row.iloc[closing_balance_col]):
+                    try:
+                        closing_bal = float(row.iloc[closing_balance_col])
+                    except:
+                        pass
+                
+                # Get value
+                value = 0
+                if value_col < len(row) and not pd.isna(row.iloc[value_col]):
+                    try:
+                        value = float(row.iloc[value_col])
+                    except:
+                        pass
+                
+                # Calculate unit price
+                unit_price = value / closing_bal if closing_bal > 0 else 0
+                
+                # Create inventory item
+                inventory_items.append({
+                    "item_code": item_code,
+                    "name": item_name if item_name else item_code,
+                    "category": group_category,
+                    "unit": unit,
+                    "stock_level": closing_bal,
+                    "price": unit_price,
+                    "value": value,
+                    "imported_at": datetime.now().isoformat()
+                })
+                
+                # Debug the first few items
+                if len(inventory_items) <= 5:
+                    st.write(f"Item: {item_name}, Stock: {closing_bal} {unit}, Price: {unit_price}")
+                
+            except Exception as row_err:
+                st.warning(f"Error processing row {i}: {str(row_err)}")
+                skipped_rows += 1
+        
+        st.success(f"Extracted {len(inventory_items)} inventory items from ABGN One Line Store file. Skipped {skipped_rows} rows.")
+        return inventory_items
+        
+    except Exception as e:
+        st.error(f"Error extracting ABGN inventory data: {str(e)}")
+        return []
+
+
 def extract_abgn_sales(file_path):
     """
     Extract sales data specifically from ABGN Sales format Excel files
@@ -980,7 +1242,8 @@ def extract_abgn_sales(file_path):
             
         # Extract date from filename
         filename = os.path.basename(file_path).lower()
-        sale_date = None
+        sale_date = datetime.now().isoformat()  # Default value if extraction fails
+        
         date_match = re.search(r'([a-zA-Z]{3})[- ](\d{4})', filename)
         if date_match and date_match.groups() and len(date_match.groups()) >= 2:
             try:
@@ -999,7 +1262,7 @@ def extract_abgn_sales(file_path):
                 st.write(f"Extracted date from filename: {sale_date}")
             except Exception as date_err:
                 st.warning(f"Could not parse date from filename: {str(date_err)}")
-                sale_date = datetime.now().isoformat()  # Use current date as fallback
+                # sale_date already has a default value
         
         # Find the header row
         header_row = -1
@@ -1208,24 +1471,34 @@ def batch_process_directory(directory):
                 if 'abgn' in file_name.lower():
                     # Handle special case for ABGN files
                     if 'sale' in file_name.lower() or 'sales' in file_name.lower():
-                        st.info("Detected ABGN Sales file, attempting direct sales extraction...")
-                        sales = extract_sales_from_excel(file_path)
+                        st.info("Detected ABGN Sales file, attempting specialized ABGN sales extraction...")
+                        sales = extract_abgn_sales(file_path)
                         if sales:
                             st.success(f"Found {len(sales)} sales records in {file_name}")
                             results['sales'].extend(sales)
                             continue
                         else:
-                            st.warning(f"Failed to extract sales data from ABGN Sales file {file_name}")
+                            st.warning(f"Failed to extract sales data from ABGN Sales file {file_name} using specialized extractor, trying generic extraction...")
+                            sales = extract_sales_from_excel(file_path)
+                            if sales:
+                                st.success(f"Found {len(sales)} sales records in {file_name} using generic extraction")
+                                results['sales'].extend(sales)
+                                continue
                     
                     elif 'store' in file_name.lower() or 'item receipt' in file_name.lower():
-                        st.info("Detected ABGN inventory file, attempting direct inventory extraction...")
-                        inventory = extract_inventory_from_excel(file_path)
+                        st.info("Detected ABGN inventory file, attempting specialized ABGN inventory extraction...")
+                        inventory = extract_abgn_inventory(file_path)
                         if inventory:
                             st.success(f"Found {len(inventory)} inventory items in {file_name}")
                             results['inventory'].extend(inventory)
                             continue
                         else:
-                            st.warning(f"Failed to extract inventory data from ABGN file {file_name}")
+                            st.warning(f"Failed to extract inventory data from ABGN file {file_name} using specialized extractor, trying generic extraction...")
+                            inventory = extract_inventory_from_excel(file_path)
+                            if inventory:
+                                st.success(f"Found {len(inventory)} inventory items in {file_name} using generic extraction")
+                                results['inventory'].extend(inventory)
+                                continue
                 
                 # Now try the recipe extraction, which is generally our primary focus
                 st.info(f"Attempting recipe extraction for {file_name}...")
