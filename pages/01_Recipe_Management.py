@@ -357,11 +357,13 @@ with tab3:
                             st.session_state.recipes = result["data"]
                         
                         # Calculate recipe costs
-                        for recipe in st.session_state.recipes:
+                        for i, recipe in enumerate(st.session_state.recipes):
+                            # Create a Recipe object
                             recipe_obj = Recipe.from_dict(recipe)
+                            # Calculate costs
                             recipe_obj.calculate_cost()
-                            # Update recipe with calculated costs
-                            recipe.update(recipe_obj.to_dict())
+                            # Replace recipe with updated version
+                            st.session_state.recipes[i] = recipe_obj.to_dict()
                         
                         # Save recipes
                         save_recipes()

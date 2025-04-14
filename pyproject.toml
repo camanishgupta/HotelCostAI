@@ -14,4 +14,5 @@ dependencies = [
     "statsmodels>=0.14.4",
     "streamlit>=1.44.1",
     "xlrd>=2.0.1",
+    "xlsxwriter>=3.2.2",
 ]

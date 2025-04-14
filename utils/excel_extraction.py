@@ -124,41 +124,75 @@ def extract_recipes_from_excel(file_path):
                 sheet_df = safe_read_excel(file_path, sheet_name=sheet)
                 if sheet_df is None or sheet_df.empty:
                     continue
+                
+                st.info(f"Processing sheet {sheet}")
                     
                 # For each potential recipe table in the sheet
                 # This is a bit complex as recipe formats vary widely
                 # We'll try a few approaches
                 
                 # Approach 1: Look for structured tables with clear recipe headers
+                recipe_found = False
                 for i in range(len(sheet_df)):
                     row = sheet_df.iloc[i]
                     # Look for rows that might indicate a recipe start
-                    if any(str(val).lower().strip() in ['recipe', 'dish', 'item', 'menu item'] 
-                           for val in row.values if isinstance(val, str)):
+                    recipe_indicators = ['recipe', 'dish', 'item', 'menu item', 'set menu', 'menu set']
+                    row_values = [str(val).lower().strip() for val in row.values if isinstance(val, str)]
+                    
+                    if any(indicator in ' '.join(row_values) for indicator in recipe_indicators):
                         # Extract this potential recipe and add to our list
                         recipe_data = extract_single_recipe(sheet_df, start_row=i)
                         if recipe_data:
                             recipes.append(recipe_data)
+                            recipe_found = True
                 
-                # Approach 2: If we didn't find structured recipes, try using AI extraction
-                if not recipes:
-                    # Convert to bytes for AI processing
-                    buffer = pd.ExcelWriter('temp.xlsx', engine='xlsxwriter')
-                    sheet_df.to_excel(buffer)
-                    buffer.save()
-                    with open('temp.xlsx', 'rb') as f:
-                        file_bytes = f.read()
-                    
-                    # Use AI to extract recipes
-                    extracted = extract_recipe_from_document(file_bytes, 'excel')
-                    if not isinstance(extracted, dict) or "error" in extracted:
-                        continue
+                # Approach 2: If we didn't find structured recipes, try a more general approach
+                if not recipe_found:
+                    # Look for clusters of text that might be recipes
+                    i = 0
+                    while i < len(sheet_df):
+                        # Skip empty rows
+                        if sheet_df.iloc[i].isnull().all():
+                            i += 1
+                            continue
                         
-                    recipes.append(extracted)
-                    
-                    # Clean up temp file
-                    if os.path.exists('temp.xlsx'):
-                        os.remove('temp.xlsx')
+                        # Check if this row looks like it might be the start of a recipe
+                        row_text = ' '.join([str(val) for val in sheet_df.iloc[i].values if not pd.isna(val)])
+                        if len(row_text.strip()) > 3 and not row_text.strip().isdigit():
+                            # This might be a recipe name or header
+                            recipe_data = extract_single_recipe(sheet_df, start_row=i)
+                            if recipe_data and recipe_data.get('name') and recipe_data.get('ingredients'):
+                                recipes.append(recipe_data)
+                                # Skip ahead a bit to avoid extracting the same recipe again
+                                i += 10
+                            else:
+                                i += 1
+                        else:
+                            i += 1
+                
+                # Approach 3: If we still didn't find any recipes, try using AI extraction
+                if not recipe_found and not recipes:
+                    try:
+                        # Create a temporary file
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
+                            # Write the data to the temp file using openpyxl
+                            with pd.ExcelWriter(tmp.name, engine='openpyxl') as writer:
+                                sheet_df.to_excel(writer, index=False)
+                            
+                            # Re-open the temp file to read its contents
+                            with open(tmp.name, 'rb') as f:
+                                file_bytes = f.read()
+                            
+                            # Use AI to extract recipes
+                            extracted = extract_recipe_from_document(file_bytes, 'excel')
+                            if isinstance(extracted, dict) and "error" not in extracted:
+                                recipes.append(extracted)
+                                
+                            # Clean up the temp file
+                            os.unlink(tmp.name)
+                    except Exception as e:
+                        st.warning(f"Error using AI extraction: {str(e)}")
                         
             except Exception as e:
                 st.warning(f"Error processing sheet {sheet}: {str(e)}")
@@ -609,43 +643,73 @@ def batch_process_directory(directory):
         files = [os.path.join(directory, f) for f in os.listdir(directory) 
                  if f.endswith('.xlsx') or f.endswith('.xls')]
                  
+        st.info(f"Found {len(files)} Excel files in {directory}")
+        
         for file_path in files:
             try:
-                # Detect file type
-                file_type = detect_file_type(file_path)
+                file_name = os.path.basename(file_path)
+                st.write(f"Processing file: {file_name}")
                 
-                # Process based on type
-                if file_type == 'recipe':
-                    recipes = extract_recipes_from_excel(file_path)
+                # First try to extract recipes, which is our primary focus
+                recipes = extract_recipes_from_excel(file_path)
+                if recipes:
+                    st.success(f"Found {len(recipes)} recipes in {file_name}")
                     results['recipes'].extend(recipes)
-                elif file_type == 'inventory':
-                    inventory = extract_inventory_from_excel(file_path)
-                    results['inventory'].extend(inventory)
-                elif file_type == 'sales':
-                    sales = extract_sales_from_excel(file_path)
-                    results['sales'].extend(sales)
-                else:
-                    # If type is unknown, try all extractors
-                    recipes = extract_recipes_from_excel(file_path)
-                    if recipes:
-                        results['recipes'].extend(recipes)
-                        continue
-                        
+                    continue
+                
+                # If no recipes found, try detecting and extracting other data types
+                file_type = detect_file_type(file_path)
+                st.write(f"Detected file type: {file_type}")
+                
+                if file_type == 'inventory':
                     inventory = extract_inventory_from_excel(file_path)
                     if inventory:
+                        st.success(f"Found {len(inventory)} inventory items in {file_name}")
                         results['inventory'].extend(inventory)
-                        continue
-                        
+                    else:
+                        st.warning(f"No inventory data could be extracted from {file_name}")
+                        results['errors'].append(f"No inventory data found in {file_path}")
+                
+                elif file_type == 'sales':
                     sales = extract_sales_from_excel(file_path)
                     if sales:
+                        st.success(f"Found {len(sales)} sales records in {file_name}")
+                        results['sales'].extend(sales)
+                    else:
+                        st.warning(f"No sales data could be extracted from {file_name}")
+                        results['errors'].append(f"No sales data found in {file_path}")
+                
+                else:
+                    # If type is unknown, try all extractors
+                    st.write("Trying all extractors for unknown file type...")
+                    
+                    inventory = extract_inventory_from_excel(file_path)
+                    if inventory:
+                        st.success(f"Found {len(inventory)} inventory items in {file_name}")
+                        results['inventory'].extend(inventory)
+                        continue
+                    
+                    sales = extract_sales_from_excel(file_path)
+                    if sales:
+                        st.success(f"Found {len(sales)} sales records in {file_name}")
                         results['sales'].extend(sales)
                         continue
-                        
+                    
+                    st.warning(f"Could not extract any useful data from {file_name}")
                     results['errors'].append(f"Could not determine data type for {file_path}")
             except Exception as e:
+                st.error(f"Error processing {os.path.basename(file_path)}: {str(e)}")
                 results['errors'].append(f"Error processing {file_path}: {str(e)}")
+        
+        # Summary of extraction
+        st.subheader("Extraction Summary")
+        st.write(f"Recipes extracted: {len(results['recipes'])}")
+        st.write(f"Inventory items extracted: {len(results['inventory'])}")
+        st.write(f"Sales records extracted: {len(results['sales'])}")
+        st.write(f"Errors encountered: {len(results['errors'])}")
         
         return results
     except Exception as e:
+        st.error(f"Error processing directory: {str(e)}")
         results['errors'].append(f"Error processing directory: {str(e)}")
         return results
