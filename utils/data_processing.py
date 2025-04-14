@@ -1,11 +1,8 @@
-import pandas as pd
-import numpy as np
 import json
 import os
-from datetime import datetime
+import pandas as pd
 import streamlit as st
-from io import BytesIO
-from utils.openai_utils import map_columns_with_ai
+from datetime import datetime
 
 def load_data(file_path):
     """
@@ -18,15 +15,13 @@ def load_data(file_path):
         list or dict: The loaded data
     """
     try:
-        if not os.path.exists(file_path):
-            if file_path.endswith('.json'):
-                return [] if 'recipes' in file_path or 'inventory' in file_path or 'sales' in file_path else {}
-        
-        with open(file_path, 'r') as f:
-            return json.load(f)
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                return json.load(f)
+        return []
     except Exception as e:
-        st.error(f"Error loading data from {file_path}: {str(e)}")
-        return [] if 'recipes' in file_path or 'inventory' in file_path or 'sales' in file_path else {}
+        st.error(f"Error loading data: {str(e)}")
+        return []
 
 def save_data(data, file_path):
     """
@@ -47,7 +42,7 @@ def save_data(data, file_path):
             json.dump(data, f, indent=2)
         return True
     except Exception as e:
-        st.error(f"Error saving data to {file_path}: {str(e)}")
+        st.error(f"Error saving data: {str(e)}")
         return False
 
 def process_excel_upload(uploaded_file, data_type, column_mapping=None):
@@ -63,46 +58,13 @@ def process_excel_upload(uploaded_file, data_type, column_mapping=None):
         dict: Processed data and status information
     """
     try:
-        # Read the Excel file
-        df = pd.read_excel(uploaded_file)
+        # Save the file to disk temporarily
+        file_path = os.path.join('data/uploaded', uploaded_file.name)
+        with open(file_path, 'wb') as f:
+            f.write(uploaded_file.getbuffer())
         
-        # If no mapping is provided, try to use a saved mapping or create a new one
-        if column_mapping is None:
-            # Define target schemas for different data types
-            target_schemas = {
-                'recipe': {
-                    'name': 'Recipe name',
-                    'ingredients': 'List of ingredients',
-                    'yield_amount': 'Yield amount',
-                    'yield_unit': 'Yield unit'
-                },
-                'inventory': {
-                    'item_code': 'Item code or SKU',
-                    'name': 'Item name',
-                    'category': 'Category',
-                    'price': 'Price per unit',
-                    'unit': 'Unit of measure',
-                    'supplier': 'Supplier name',
-                    'stock_level': 'Current stock level'
-                },
-                'sales': {
-                    'date': 'Sale date',
-                    'item_name': 'Item name',
-                    'quantity': 'Quantity sold',
-                    'revenue': 'Revenue amount',
-                    'cost': 'Cost amount'
-                }
-            }
-            
-            # Get the target schema for this data type
-            schema = target_schemas.get(data_type, {})
-            
-            # Use AI to map columns
-            sample_data = df.head(5).to_dict()
-            column_mapping = map_columns_with_ai(sample_data, schema)
-            
-            if "error" in column_mapping:
-                return {"status": "error", "message": column_mapping["error"]}
+        # Read the file
+        df = pd.read_excel(file_path)
         
         # Process the data based on type
         if data_type == 'recipe':
@@ -112,15 +74,19 @@ def process_excel_upload(uploaded_file, data_type, column_mapping=None):
         elif data_type == 'sales':
             processed_data = process_sales_data(df, column_mapping)
         else:
-            return {"status": "error", "message": f"Unknown data type: {data_type}"}
+            return {"error": "Invalid data type"}
         
         return {
-            "status": "success",
             "data": processed_data,
-            "mapping": column_mapping
+            "status": "success",
+            "message": f"Successfully processed {len(processed_data)} {data_type} items"
         }
     except Exception as e:
-        return {"status": "error", "message": f"Error processing file: {str(e)}"}
+        return {
+            "error": str(e),
+            "status": "error",
+            "message": f"Error processing file: {str(e)}"
+        }
 
 def process_recipe_data(df, column_mapping):
     """
@@ -133,38 +99,68 @@ def process_recipe_data(df, column_mapping):
     Returns:
         list: Processed recipe data
     """
+    if column_mapping is None:
+        column_mapping = {}
+    
+    # Default mappings if not provided
+    name_col = column_mapping.get('name', 'Name')
+    yield_amount_col = column_mapping.get('yield_amount', 'Yield Amount')
+    yield_unit_col = column_mapping.get('yield_unit', 'Yield Unit')
+    ingredients_col = column_mapping.get('ingredients', 'Ingredients')
+    
     recipes = []
     
-    # Reverse the mapping to go from system field to file column
-    rev_mapping = {v: k for k, v in column_mapping.items() if v is not None}
-    
+    # Process each recipe
     for _, row in df.iterrows():
-        recipe = {
-            "name": row[rev_mapping.get('name')] if 'name' in rev_mapping else "Unnamed Recipe",
-            "ingredients": [],
-            "yield_amount": row[rev_mapping.get('yield_amount')] if 'yield_amount' in rev_mapping else 1,
-            "yield_unit": row[rev_mapping.get('yield_unit')] if 'yield_unit' in rev_mapping else "serving",
-            "created_at": datetime.now().isoformat()
-        }
-        
-        # Process ingredients if available
-        if 'ingredients' in rev_mapping:
-            ingredients_str = row[rev_mapping['ingredients']]
-            # Simple parsing of ingredients (in a real app, this would be more sophisticated)
-            ingredients_list = ingredients_str.split(',')
-            for ing in ingredients_list:
-                parts = ing.strip().split()
-                if len(parts) >= 2:
-                    amount = parts[0]
-                    unit = parts[1]
-                    name = ' '.join(parts[2:])
+        try:
+            recipe = {
+                "name": str(row.get(name_col, "")),
+                "yield_amount": float(row.get(yield_amount_col, 1)),
+                "yield_unit": str(row.get(yield_unit_col, "serving")),
+                "ingredients": [],
+                "preparation_steps": [],
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            # Process ingredients if available
+            ingredients_str = str(row.get(ingredients_col, ""))
+            if ingredients_str:
+                # Split ingredients by newline or comma
+                ingredient_list = ingredients_str.split('\n') if '\n' in ingredients_str else ingredients_str.split(',')
+                
+                for ing_str in ingredient_list:
+                    ing_str = ing_str.strip()
+                    if not ing_str:
+                        continue
+                    
+                    # Try to parse amount and unit
+                    import re
+                    match = re.search(r'(\d+\.?\d*)\s*([a-zA-Z]+)', ing_str)
+                    
+                    if match:
+                        amount = float(match.group(1))
+                        unit = match.group(2)
+                        name = ing_str[match.end():].strip()
+                        if not name:
+                            name = ing_str[:match.start()].strip()
+                    else:
+                        # Default values if parsing fails
+                        amount = 1
+                        unit = "piece"
+                        name = ing_str
+                    
                     recipe["ingredients"].append({
                         "name": name,
                         "amount": amount,
-                        "unit": unit
+                        "unit": unit,
+                        "cost": 0
                     })
-        
-        recipes.append(recipe)
+            
+            recipes.append(recipe)
+        except Exception as e:
+            st.warning(f"Error processing recipe row: {str(e)}")
+            continue
     
     return recipes
 
@@ -179,24 +175,65 @@ def process_inventory_data(df, column_mapping):
     Returns:
         list: Processed inventory data
     """
+    if column_mapping is None:
+        column_mapping = {}
+    
+    # Default mappings if not provided
+    item_code_col = column_mapping.get('item_code', 'Item Code')
+    name_col = column_mapping.get('name', 'Name')
+    category_col = column_mapping.get('category', 'Category')
+    price_col = column_mapping.get('price', 'Price')
+    unit_col = column_mapping.get('unit', 'Unit')
+    supplier_col = column_mapping.get('supplier', 'Supplier')
+    stock_level_col = column_mapping.get('stock_level', 'Stock Level')
+    
     inventory_items = []
     
-    # Reverse the mapping to go from system field to file column
-    rev_mapping = {v: k for k, v in column_mapping.items() if v is not None}
-    
+    # Process each inventory item
     for _, row in df.iterrows():
-        item = {
-            "item_code": row[rev_mapping.get('item_code')] if 'item_code' in rev_mapping else f"ITEM{len(inventory_items)+1}",
-            "name": row[rev_mapping.get('name')] if 'name' in rev_mapping else "Unnamed Item",
-            "category": row[rev_mapping.get('category')] if 'category' in rev_mapping else "Uncategorized",
-            "price": float(row[rev_mapping.get('price')]) if 'price' in rev_mapping else 0.0,
-            "unit": row[rev_mapping.get('unit')] if 'unit' in rev_mapping else "unit",
-            "supplier": row[rev_mapping.get('supplier')] if 'supplier' in rev_mapping else "Unknown",
-            "stock_level": float(row[rev_mapping.get('stock_level')]) if 'stock_level' in rev_mapping else 0.0,
-            "updated_at": datetime.now().isoformat()
-        }
-        
-        inventory_items.append(item)
+        try:
+            # Handle NaN values
+            item_code = str(row.get(item_code_col, "")) if pd.notna(row.get(item_code_col, "")) else ""
+            name = str(row.get(name_col, "")) if pd.notna(row.get(name_col, "")) else ""
+            category = str(row.get(category_col, "")) if pd.notna(row.get(category_col, "")) else ""
+            unit = str(row.get(unit_col, "")) if pd.notna(row.get(unit_col, "")) else ""
+            supplier = str(row.get(supplier_col, "")) if pd.notna(row.get(supplier_col, "")) else ""
+            
+            # Convert price and stock level to float
+            try:
+                price = float(row.get(price_col, 0))
+            except:
+                price = 0
+                
+            try:
+                stock_level = float(row.get(stock_level_col, 0))
+            except:
+                stock_level = 0
+            
+            # Skip empty rows
+            if not name:
+                continue
+            
+            # Generate item code if missing
+            if not item_code:
+                item_code = f"ITEM{len(inventory_items) + 1:04d}"
+            
+            inventory_items.append({
+                "item_code": item_code,
+                "name": name,
+                "category": category,
+                "price": price,
+                "unit": unit,
+                "supplier": supplier,
+                "stock_level": stock_level,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+                "price_history": [],
+                "stock_history": []
+            })
+        except Exception as e:
+            st.warning(f"Error processing inventory row: {str(e)}")
+            continue
     
     return inventory_items
 
@@ -211,22 +248,71 @@ def process_sales_data(df, column_mapping):
     Returns:
         list: Processed sales data
     """
+    if column_mapping is None:
+        column_mapping = {}
+    
+    # Default mappings if not provided
+    date_col = column_mapping.get('date', 'Date')
+    item_name_col = column_mapping.get('item_name', 'Item Name')
+    quantity_col = column_mapping.get('quantity', 'Quantity')
+    revenue_col = column_mapping.get('revenue', 'Revenue')
+    cost_col = column_mapping.get('cost', 'Cost')
+    
     sales_records = []
     
-    # Reverse the mapping to go from system field to file column
-    rev_mapping = {v: k for k, v in column_mapping.items() if v is not None}
-    
+    # Process each sales record
     for _, row in df.iterrows():
-        record = {
-            "date": row[rev_mapping.get('date')].isoformat() if 'date' in rev_mapping and pd.notna(row[rev_mapping.get('date')]) else datetime.now().isoformat(),
-            "item_name": row[rev_mapping.get('item_name')] if 'item_name' in rev_mapping else "Unknown Item",
-            "quantity": float(row[rev_mapping.get('quantity')]) if 'quantity' in rev_mapping else 0,
-            "revenue": float(row[rev_mapping.get('revenue')]) if 'revenue' in rev_mapping else 0.0,
-            "cost": float(row[rev_mapping.get('cost')]) if 'cost' in rev_mapping else 0.0,
-            "imported_at": datetime.now().isoformat()
-        }
-        
-        sales_records.append(record)
+        try:
+            # Handle date
+            try:
+                date_value = row.get(date_col, datetime.now())
+                if pd.isna(date_value):
+                    date = datetime.now().isoformat()
+                else:
+                    date = pd.Timestamp(date_value).isoformat()
+            except:
+                date = datetime.now().isoformat()
+            
+            # Handle item name
+            item_name = str(row.get(item_name_col, "")) if pd.notna(row.get(item_name_col, "")) else ""
+            
+            # Convert numeric values
+            try:
+                quantity = float(row.get(quantity_col, 0))
+            except:
+                quantity = 0
+                
+            try:
+                revenue = float(row.get(revenue_col, 0))
+            except:
+                revenue = 0
+                
+            try:
+                cost = float(row.get(cost_col, 0))
+            except:
+                cost = 0
+            
+            # Skip empty rows
+            if not item_name or quantity == 0:
+                continue
+            
+            # Calculate profit metrics
+            profit = revenue - cost
+            profit_margin = (profit / revenue) * 100 if revenue > 0 else 0
+            
+            sales_records.append({
+                "date": date,
+                "item_name": item_name,
+                "quantity": quantity,
+                "revenue": revenue,
+                "cost": cost,
+                "profit": profit,
+                "profit_margin": profit_margin,
+                "imported_at": datetime.now().isoformat()
+            })
+        except Exception as e:
+            st.warning(f"Error processing sales row: {str(e)}")
+            continue
     
     return sales_records
 
@@ -241,41 +327,45 @@ def calculate_recipe_cost(recipe, inventory):
     Returns:
         float: Total cost of the recipe
     """
-    total_cost = 0.0
+    # Create a dictionary of inventory items for quick lookup
+    inventory_dict = {item["name"].lower(): item for item in inventory}
     
-    # Create a lookup dict for inventory items
-    inventory_dict = {item['name'].lower(): item for item in inventory}
+    total_cost = 0
     
-    # Add alternative lookup by item code
-    for item in inventory:
-        inventory_dict[item['item_code'].lower()] = item
-    
-    # Calculate cost for each ingredient
-    for ingredient in recipe.get('ingredients', []):
-        ingredient_name = ingredient['name'].lower()
-        ingredient_amount = float(ingredient['amount'])
-        ingredient_unit = ingredient['unit'].lower()
+    # Process each ingredient
+    for ingredient in recipe.get("ingredients", []):
+        ingredient_name = ingredient.get("name", "").lower()
+        ingredient_amount = ingredient.get("amount", 0)
         
-        # Try to find the ingredient in inventory
-        inventory_item = inventory_dict.get(ingredient_name)
-        
-        if inventory_item:
-            # Check if units match
-            if inventory_item['unit'].lower() == ingredient_unit:
-                # Direct calculation
-                ingredient_cost = ingredient_amount * float(inventory_item['price'])
-            else:
-                # Unit conversion would be needed here
-                # For simplicity, we'll use a 1:1 conversion
-                ingredient_cost = ingredient_amount * float(inventory_item['price'])
-                ingredient['unit_mismatch'] = True
+        # Look for exact match
+        if ingredient_name in inventory_dict:
+            item = inventory_dict[ingredient_name]
+            price = item.get("price", 0)
+            ingredient_cost = price * ingredient_amount
             
-            ingredient['cost'] = ingredient_cost
+            # Update ingredient cost
+            ingredient["cost"] = ingredient_cost
             total_cost += ingredient_cost
         else:
-            # Ingredient not found in inventory
-            ingredient['missing'] = True
-            ingredient['cost'] = 0.0
+            # Look for fuzzy match
+            best_match = None
+            best_score = 0
+            
+            for inv_name, item in inventory_dict.items():
+                # Simple similarity score
+                if ingredient_name in inv_name or inv_name in ingredient_name:
+                    score = len(set(ingredient_name) & set(inv_name)) / len(set(ingredient_name) | set(inv_name))
+                    if score > best_score:
+                        best_score = score
+                        best_match = item
+            
+            if best_match and best_score > 0.6:  # Threshold for fuzzy matching
+                price = best_match.get("price", 0)
+                ingredient_cost = price * ingredient_amount
+                
+                # Update ingredient cost
+                ingredient["cost"] = ingredient_cost
+                total_cost += ingredient_cost
     
     return total_cost
 
@@ -290,64 +380,63 @@ def generate_column_mapping_ui(df, data_type):
     Returns:
         dict: User-selected column mapping
     """
-    # Define the fields needed for each data type
-    field_definitions = {
-        'recipe': {
-            'name': 'Recipe name',
-            'ingredients': 'List of ingredients',
-            'yield_amount': 'Yield amount',
-            'yield_unit': 'Yield unit'
-        },
-        'inventory': {
-            'item_code': 'Item code or SKU',
-            'name': 'Item name',
-            'category': 'Category',
-            'price': 'Price per unit',
-            'unit': 'Unit of measure',
-            'supplier': 'Supplier name',
-            'stock_level': 'Current stock level'
-        },
-        'sales': {
-            'date': 'Sale date',
-            'item_name': 'Item name',
-            'quantity': 'Quantity sold',
-            'revenue': 'Revenue amount',
-            'cost': 'Cost amount'
-        }
-    }
+    # Define system fields based on data type
+    if data_type == 'recipe':
+        system_fields = [
+            "name",
+            "yield_amount",
+            "yield_unit",
+            "ingredients",
+            "preparation_steps"
+        ]
+    elif data_type == 'inventory':
+        system_fields = [
+            "item_code",
+            "name",
+            "category",
+            "price",
+            "unit",
+            "supplier",
+            "stock_level"
+        ]
+    elif data_type == 'sales':
+        system_fields = [
+            "date",
+            "item_name",
+            "quantity",
+            "revenue",
+            "cost"
+        ]
+    else:
+        st.error("Invalid data type")
+        return {}
     
-    # Use the appropriate field set
-    fields = field_definitions.get(data_type, {})
+    # Get Excel file columns
+    file_columns = list(df.columns)
+    file_columns.insert(0, "None")  # Add option for no mapping
     
     st.subheader("Map Columns")
-    st.markdown("Please map the columns from your file to our system fields.")
+    st.write("Map columns from your file to our system fields")
     
-    # Get the column names from the DataFrame
-    columns = list(df.columns)
-    columns.insert(0, "-- Not mapped --")
-    
-    # Create the mapping
+    # Create mapping UI
     mapping = {}
-    for field, description in fields.items():
-        # Try to find a good default by looking for similar column names
-        default_idx = 0
-        for i, col in enumerate(columns):
-            if field.lower() in col.lower() or col.lower() in field.lower():
-                default_idx = i
+    for field in system_fields:
+        # Try to find a match automatically
+        default_index = 0
+        for i, col in enumerate(file_columns):
+            if field.lower() in str(col).lower():
+                default_index = i
                 break
         
-        # Let the user select the mapping
-        selected = st.selectbox(
-            f"{description} ({field})",
-            columns,
-            index=default_idx,
-            key=f"map_{field}"
+        # Let user select mapping
+        selected_column = st.selectbox(
+            f"Map '{field}' to:",
+            file_columns,
+            index=default_index,
+            key=f"mapping_{field}"
         )
         
-        # Add to mapping if not the "Not mapped" option
-        if selected != "-- Not mapped --":
-            mapping[field] = selected
-        else:
-            mapping[field] = None
+        if selected_column != "None":
+            mapping[field] = selected_column
     
     return mapping

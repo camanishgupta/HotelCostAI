@@ -1,7 +1,4 @@
 from datetime import datetime
-import json
-import os
-import pandas as pd
 
 class Recipe:
     """
@@ -13,11 +10,11 @@ class Recipe:
         self.yield_amount = yield_amount
         self.yield_unit = yield_unit
         self.preparation_steps = []
-        self.total_cost = 0
-        self.cost_per_unit = 0
+        self.total_cost = 0.0
+        self.cost_per_unit = 0.0
         self.created_at = datetime.now().isoformat()
         self.updated_at = datetime.now().isoformat()
-    
+        
     def add_ingredient(self, name, amount, unit, cost=0):
         """
         Add an ingredient to the recipe
@@ -34,10 +31,9 @@ class Recipe:
             "unit": unit,
             "cost": cost
         })
-        
-        # Update the cost
         self.calculate_cost()
-    
+        self.updated_at = datetime.now().isoformat()
+        
     def remove_ingredient(self, index):
         """
         Remove an ingredient by index
@@ -48,7 +44,8 @@ class Recipe:
         if 0 <= index < len(self.ingredients):
             del self.ingredients[index]
             self.calculate_cost()
-    
+            self.updated_at = datetime.now().isoformat()
+            
     def update_ingredient(self, index, name=None, amount=None, unit=None, cost=None):
         """
         Update an ingredient by index
@@ -69,22 +66,20 @@ class Recipe:
                 self.ingredients[index]["unit"] = unit
             if cost is not None:
                 self.ingredients[index]["cost"] = cost
-            
+                
             self.calculate_cost()
-    
+            self.updated_at = datetime.now().isoformat()
+            
     def calculate_cost(self):
         """
         Calculate the total cost of the recipe
         """
-        self.total_cost = sum(ing.get("cost", 0) for ing in self.ingredients)
-        
+        self.total_cost = sum(ingredient.get("cost", 0) for ingredient in self.ingredients)
         if self.yield_amount > 0:
             self.cost_per_unit = self.total_cost / self.yield_amount
         else:
             self.cost_per_unit = 0
             
-        self.updated_at = datetime.now().isoformat()
-    
     def scale_recipe(self, new_yield):
         """
         Scale recipe ingredients to a new yield
@@ -95,33 +90,28 @@ class Recipe:
         Returns:
             Recipe: New scaled recipe
         """
-        if new_yield <= 0 or self.yield_amount <= 0:
+        if self.yield_amount == 0:
             return self
-        
+            
         scale_factor = new_yield / self.yield_amount
-        
-        scaled_recipe = Recipe(
-            name=f"{self.name} (Scaled)",
+        new_recipe = Recipe(
+            name=f"{self.name} ({new_yield} {self.yield_unit})",
             yield_amount=new_yield,
             yield_unit=self.yield_unit
         )
         
-        # Scale all ingredients
-        for ing in self.ingredients:
-            scaled_amount = float(ing["amount"]) * scale_factor
-            scaled_cost = ing.get("cost", 0) * scale_factor
-            
-            scaled_recipe.add_ingredient(
-                name=ing["name"],
-                amount=scaled_amount,
-                unit=ing["unit"],
-                cost=scaled_cost
+        for ingredient in self.ingredients:
+            new_recipe.add_ingredient(
+                name=ingredient["name"],
+                amount=ingredient["amount"] * scale_factor,
+                unit=ingredient["unit"],
+                cost=ingredient["cost"] * scale_factor
             )
+            
+        new_recipe.preparation_steps = self.preparation_steps.copy()
         
-        scaled_recipe.preparation_steps = self.preparation_steps
+        return new_recipe
         
-        return scaled_recipe
-    
     def to_dict(self):
         """
         Convert the recipe to a dictionary
@@ -140,7 +130,7 @@ class Recipe:
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
-    
+        
     @classmethod
     def from_dict(cls, data):
         """
@@ -160,8 +150,8 @@ class Recipe:
         )
         
         recipe.preparation_steps = data.get("preparation_steps", [])
-        recipe.total_cost = data.get("total_cost", 0)
-        recipe.cost_per_unit = data.get("cost_per_unit", 0)
+        recipe.total_cost = data.get("total_cost", 0.0)
+        recipe.cost_per_unit = data.get("cost_per_unit", 0.0)
         recipe.created_at = data.get("created_at", datetime.now().isoformat())
         recipe.updated_at = data.get("updated_at", datetime.now().isoformat())
         

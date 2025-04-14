@@ -1,7 +1,4 @@
 from datetime import datetime
-import json
-import os
-import pandas as pd
 
 class InventoryItem:
     """
@@ -15,10 +12,11 @@ class InventoryItem:
         self.unit = unit
         self.supplier = supplier
         self.stock_level = stock_level
-        self.price_history = []
         self.created_at = datetime.now().isoformat()
         self.updated_at = datetime.now().isoformat()
-    
+        self.price_history = []
+        self.stock_history = []
+        
     def update_price(self, new_price, date=None):
         """
         Update the price of the inventory item
@@ -27,16 +25,20 @@ class InventoryItem:
             new_price (float): New price
             date (str, optional): Date of the price change
         """
-        # Store the old price in history
-        if self.price != new_price:
-            self.price_history.append({
-                "price": self.price,
-                "date": date or datetime.now().isoformat()
-            })
+        if date is None:
+            date = datetime.now().isoformat()
             
-            self.price = new_price
-            self.updated_at = datetime.now().isoformat()
-    
+        # Add to price history
+        self.price_history.append({
+            "old_price": self.price,
+            "new_price": new_price,
+            "date": date
+        })
+        
+        # Update current price
+        self.price = new_price
+        self.updated_at = datetime.now().isoformat()
+        
     def update_stock(self, new_stock_level, date=None):
         """
         Update the stock level of the inventory item
@@ -45,9 +47,20 @@ class InventoryItem:
             new_stock_level (float): New stock level
             date (str, optional): Date of the stock update
         """
+        if date is None:
+            date = datetime.now().isoformat()
+            
+        # Add to stock history
+        self.stock_history.append({
+            "old_level": self.stock_level,
+            "new_level": new_stock_level,
+            "date": date
+        })
+        
+        # Update current stock level
         self.stock_level = new_stock_level
-        self.updated_at = date or datetime.now().isoformat()
-    
+        self.updated_at = datetime.now().isoformat()
+        
     def add_stock(self, amount, date=None):
         """
         Add stock to the inventory item
@@ -56,9 +69,8 @@ class InventoryItem:
             amount (float): Amount to add
             date (str, optional): Date of the stock addition
         """
-        self.stock_level += amount
-        self.updated_at = date or datetime.now().isoformat()
-    
+        self.update_stock(self.stock_level + amount, date)
+        
     def remove_stock(self, amount, date=None):
         """
         Remove stock from the inventory item
@@ -70,12 +82,12 @@ class InventoryItem:
         Returns:
             bool: True if successful, False if not enough stock
         """
-        if amount <= self.stock_level:
-            self.stock_level -= amount
-            self.updated_at = date or datetime.now().isoformat()
-            return True
-        return False
-    
+        if amount > self.stock_level:
+            return False
+            
+        self.update_stock(self.stock_level - amount, date)
+        return True
+        
     def calculate_value(self):
         """
         Calculate the total value of this inventory item
@@ -84,7 +96,7 @@ class InventoryItem:
             float: Total value
         """
         return self.price * self.stock_level
-    
+        
     def price_change_percentage(self):
         """
         Calculate the percentage change from the previous price
@@ -94,14 +106,15 @@ class InventoryItem:
         """
         if not self.price_history:
             return 0
+            
+        last_change = self.price_history[-1]
+        old_price = last_change["old_price"]
         
-        previous_price = self.price_history[-1]["price"]
-        
-        if previous_price == 0:
+        if old_price == 0:
             return 0
             
-        return ((self.price - previous_price) / previous_price) * 100
-    
+        return ((self.price - old_price) / old_price) * 100
+        
     def to_dict(self):
         """
         Convert the inventory item to a dictionary
@@ -117,11 +130,12 @@ class InventoryItem:
             "unit": self.unit,
             "supplier": self.supplier,
             "stock_level": self.stock_level,
-            "price_history": self.price_history,
             "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "updated_at": self.updated_at,
+            "price_history": self.price_history,
+            "stock_history": self.stock_history
         }
-    
+        
     @classmethod
     def from_dict(cls, data):
         """
@@ -143,11 +157,13 @@ class InventoryItem:
             stock_level=data.get("stock_level", 0.0)
         )
         
-        item.price_history = data.get("price_history", [])
         item.created_at = data.get("created_at", datetime.now().isoformat())
         item.updated_at = data.get("updated_at", datetime.now().isoformat())
+        item.price_history = data.get("price_history", [])
+        item.stock_history = data.get("stock_history", [])
         
         return item
+
 
 def detect_price_changes(old_inventory, new_inventory, threshold_percentage=5):
     """
@@ -161,40 +177,43 @@ def detect_price_changes(old_inventory, new_inventory, threshold_percentage=5):
     Returns:
         list: Items with significant price changes
     """
-    # Convert to dictionaries for easier lookup
-    old_dict = {item["item_code"]: item for item in old_inventory}
-    
     changes = []
     
+    # Create a dictionary of old inventory items by name for quick lookup
+    old_items = {item.get("name", ""): item for item in old_inventory}
+    
+    # Check each item in the new inventory
     for new_item in new_inventory:
-        item_code = new_item["item_code"]
+        name = new_item.get("name", "")
+        new_price = new_item.get("price", 0)
         
-        if item_code in old_dict:
-            old_price = old_dict[item_code]["price"]
-            new_price = new_item["price"]
+        # Skip if name is empty or price is 0
+        if not name or new_price == 0:
+            continue
             
-            # Skip if prices are the same
-            if old_price == new_price:
+        # Check if this item exists in the old inventory
+        if name in old_items:
+            old_item = old_items[name]
+            old_price = old_item.get("price", 0)
+            
+            # Skip if old price is 0
+            if old_price == 0:
                 continue
-            
+                
             # Calculate percentage change
-            if old_price > 0:
-                percentage_change = ((new_price - old_price) / old_price) * 100
-            else:
-                percentage_change = 0 if new_price == 0 else 100
+            percent_change = ((new_price - old_price) / old_price) * 100
             
-            # Only include significant changes
-            if abs(percentage_change) >= threshold_percentage:
+            # Check if change is significant
+            if abs(percent_change) >= threshold_percentage:
                 changes.append({
-                    "item_code": item_code,
-                    "name": new_item["name"],
+                    "name": name,
                     "old_price": old_price,
                     "new_price": new_price,
-                    "percentage_change": percentage_change,
-                    "unit": new_item["unit"]
+                    "percent_change": percent_change,
+                    "unit": new_item.get("unit", "")
                 })
     
-    # Sort by absolute percentage change, highest first
-    changes.sort(key=lambda x: abs(x["percentage_change"]), reverse=True)
+    # Sort by absolute percentage change
+    changes.sort(key=lambda x: abs(x["percent_change"]), reverse=True)
     
     return changes
