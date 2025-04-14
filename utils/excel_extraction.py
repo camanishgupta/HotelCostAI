@@ -944,6 +944,220 @@ def extract_sales_from_excel(file_path):
         st.error(f"Error extracting sales: {str(e)}")
         return []
 
+def extract_abgn_sales(file_path):
+    """
+    Extract sales data specifically from ABGN Sales format Excel files
+    
+    Args:
+        file_path (str): Path to the ABGN Sales Excel file
+        
+    Returns:
+        list: Extracted sales records
+    """
+    try:
+        # Try different engines to handle various Excel formats
+        dfs = []
+        errors = []
+        
+        try:
+            df = pd.read_excel(file_path, engine='openpyxl')
+            dfs.append(df)
+        except Exception as e:
+            errors.append(f"openpyxl error: {str(e)}")
+            
+        try:
+            df = pd.read_excel(file_path, engine='xlrd')
+            dfs.append(df)
+        except Exception as e:
+            errors.append(f"xlrd error: {str(e)}")
+        
+        # Use the first successful DataFrame or raise an error
+        if dfs:
+            df = dfs[0]
+        else:
+            st.error(f"Failed to read Excel file: {', '.join(errors)}")
+            return []
+            
+        # Extract date from filename
+        filename = os.path.basename(file_path).lower()
+        sale_date = None
+        date_match = re.search(r'([a-zA-Z]{3})[- ](\d{4})', filename)
+        if date_match and date_match.groups() and len(date_match.groups()) >= 2:
+            try:
+                month_str = date_match.group(1)
+                year_str = date_match.group(2)
+                
+                # Map month name to number
+                month_map = {
+                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                }
+                month_num = month_map.get(month_str.lower(), 1)  # Default to January if not found
+                
+                # Create date and convert to ISO format
+                sale_date = datetime(int(year_str), month_num, 15).isoformat()  # Middle of month
+                st.write(f"Extracted date from filename: {sale_date}")
+            except Exception as date_err:
+                st.warning(f"Could not parse date from filename: {str(date_err)}")
+                sale_date = datetime.now().isoformat()  # Use current date as fallback
+        
+        # Find the header row
+        header_row = -1
+        for i in range(min(20, len(df))):
+            row = df.iloc[i]
+            row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+            if "item" in row_text and any(term in row_text for term in ["qty", "quantity"]) and any(term in row_text for term in ["value", "rate", "amount"]):
+                header_row = i
+                st.info(f"Found header row at row {i}")
+                break
+        
+        # Determine column indices based on header row
+        item_col = None
+        desc_col = None
+        qty_col = None 
+        rate_col = None
+        value_col = None
+        
+        if header_row >= 0:
+            # Get header values
+            header = df.iloc[header_row]
+            
+            # Look for column names
+            for i, col_val in enumerate(header):
+                if pd.isna(col_val):
+                    continue
+                    
+                col_text = str(col_val).lower()
+                if col_text == "item":
+                    item_col = i
+                elif any(term in col_text for term in ["description", "name"]):
+                    desc_col = i
+                elif any(term in col_text for term in ["qty", "quantity"]):
+                    qty_col = i
+                elif any(term in col_text for term in ["rate", "price"]):
+                    rate_col = i
+                elif any(term in col_text for term in ["value", "amount", "total"]):
+                    value_col = i
+        
+        # If columns not found, use default positions
+        if item_col is None:
+            # In ABGN Sale format, first column is often item code or item
+            item_col = 0
+            
+        if desc_col is None and len(df.columns) > 1:
+            # Second column is often description
+            desc_col = 1
+            
+        if qty_col is None and len(df.columns) > 2:
+            # Third column is often quantity
+            qty_col = 2
+            
+        if rate_col is None and len(df.columns) > 3:
+            # Fourth column is often rate
+            rate_col = 3
+            
+        if value_col is None and len(df.columns) > 4:
+            # Fifth column is often value/total
+            value_col = 4
+        
+        # Start processing from row after header
+        start_row = header_row + 1 if header_row >= 0 else 0
+        st.info(f"Processing data from row {start_row}")
+        st.info(f"Using columns: Item={item_col}, Desc={desc_col}, Qty={qty_col}, Rate={rate_col}, Value={value_col}")
+        
+        # Process all rows
+        sales_records = []
+        skipped_rows = 0
+        
+        for i in range(start_row, len(df)):
+            try:
+                row = df.iloc[i]
+                
+                # Skip empty rows
+                if all(pd.isna(val) for val in row.values):
+                    skipped_rows += 1
+                    continue
+                
+                # Get item name - prefer description column if available, otherwise item column
+                if desc_col is not None and desc_col < len(row) and not pd.isna(row.iloc[desc_col]):
+                    item_name = str(row.iloc[desc_col])
+                elif item_col is not None and item_col < len(row) and not pd.isna(row.iloc[item_col]):
+                    item_name = str(row.iloc[item_col])
+                else:
+                    skipped_rows += 1
+                    continue
+                
+                # Clean up item name - remove trailing dashes which are common in ABGN format
+                item_name = re.sub(r'\s*-+\s*$', '', item_name).strip()
+                
+                # Skip total and section heading rows
+                item_lower = item_name.lower()
+                if any(term in item_lower for term in ["total", "group", "__________", "main dining", "item"]):
+                    skipped_rows += 1
+                    continue
+                
+                # Get quantity
+                quantity = None
+                if qty_col is not None and qty_col < len(row):
+                    qty_val = row.iloc[qty_col]
+                    if not pd.isna(qty_val) and isinstance(qty_val, (int, float)) and qty_val > 0:
+                        quantity = float(qty_val)
+                
+                # Skip if no valid quantity
+                if quantity is None or quantity <= 0:
+                    skipped_rows += 1
+                    continue
+                
+                # Get revenue - prefer value column, but calculate from rate if needed
+                revenue = 0
+                if value_col is not None and value_col < len(row):
+                    val = row.iloc[value_col]
+                    if not pd.isna(val) and (isinstance(val, (int, float)) or (isinstance(val, str) and val.replace('.', '', 1).isdigit())):
+                        if isinstance(val, str):
+                            revenue = float(val.replace(',', ''))
+                        else:
+                            revenue = float(val)
+                            
+                if revenue == 0 and rate_col is not None and rate_col < len(row):
+                    rate_val = row.iloc[rate_col]
+                    if not pd.isna(rate_val) and (isinstance(rate_val, (int, float)) or (isinstance(rate_val, str) and rate_val.replace('.', '', 1).isdigit())):
+                        if isinstance(rate_val, str):
+                            rate = float(rate_val.replace(',', ''))
+                        else:
+                            rate = float(rate_val)
+                        revenue = rate * quantity
+                
+                # Estimate cost (30% of revenue)
+                cost = revenue * 0.3
+                
+                # Create sales record
+                sales_records.append({
+                    "date": sale_date,
+                    "item_name": item_name,
+                    "quantity": quantity,
+                    "revenue": revenue,
+                    "cost": cost,
+                    "profit": revenue - cost,
+                    "profit_margin": ((revenue - cost) / revenue * 100) if revenue > 0 else 0,
+                    "imported_at": datetime.now().isoformat()
+                })
+                
+                # Debug the first few records
+                if len(sales_records) <= 5:
+                    st.write(f"Item: {item_name}, Qty: {quantity}, Revenue: {revenue}")
+                
+            except Exception as row_err:
+                st.warning(f"Error processing row {i}: {str(row_err)}")
+                skipped_rows += 1
+        
+        st.success(f"Extracted {len(sales_records)} sales records from ABGN Sale file. Skipped {skipped_rows} rows.")
+        return sales_records
+        
+    except Exception as e:
+        st.error(f"Error extracting ABGN sales data: {str(e)}")
+        return []
+
+
 def batch_process_directory(directory):
     """
     Process all Excel files in a directory
