@@ -795,7 +795,7 @@ def extract_sales_from_excel(file_path):
                 has_data = False
                 
                 # Set date from ABGN file analysis if available
-                if sale_date:
+                if 'sale_date' in locals() and sale_date:
                     record.date = sale_date
                     has_data = True
                 

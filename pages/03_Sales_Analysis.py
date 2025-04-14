@@ -90,7 +90,7 @@ with tab1:
         st.metric("Total Profit", f"${sales_analysis['total_profit']:.2f}")
     
     with col3:
-        st.metric("Profit Margin", f"{sales_analysis['average_profit_margin']:.1f}%")
+        st.metric("Profit Margin", f"{sales_analysis['avg_profit_margin']:.1f}%")
     
     with col4:
         # Calculate average daily revenue
