@@ -220,20 +220,23 @@ with tab3:
                     
                     # Option to save
                     if st.button("Save Extracted Recipes"):
-                        # Determine import mode
-                        import_mode = st.radio(
-                            "Import mode:",
-                            ["Add to existing recipes", "Replace all recipes"],
-                            key="recipe_import_mode"
-                        )
-                        
-                        if import_mode == "Add to existing recipes":
-                            st.session_state.recipes.extend(results['recipes'])
+                        if results['recipes']:
+                            # Determine import mode
+                            import_mode = st.radio(
+                                "Recipe import mode:",
+                                ["Add to existing recipes", "Replace all recipes"],
+                                key="recipe_import_mode"
+                            )
+                            
+                            if import_mode == "Add to existing recipes":
+                                st.session_state.recipes.extend(results['recipes'])
+                            else:
+                                st.session_state.recipes = results['recipes']
+                            
+                            save_recipes()
+                            st.success(f"Saved {len(results['recipes'])} recipes!")
                         else:
-                            st.session_state.recipes = results['recipes']
-                        
-                        save_recipes()
-                        st.success(f"Saved {len(results['recipes'])} recipes!")
+                            st.warning("No recipes were found to save.")
                 else:
                     st.info("No recipes were extracted.")
             
@@ -252,20 +255,23 @@ with tab3:
                     
                     # Option to save
                     if st.button("Save Extracted Inventory"):
-                        # Determine import mode
-                        import_mode = st.radio(
-                            "Import mode:",
-                            ["Add to existing inventory", "Replace all inventory"],
-                            key="inventory_import_mode"
-                        )
-                        
-                        if import_mode == "Add to existing inventory":
-                            st.session_state.inventory.extend(results['inventory'])
+                        if results['inventory']:
+                            # Determine import mode
+                            import_mode = st.radio(
+                                "Inventory import mode:",
+                                ["Add to existing inventory", "Replace all inventory"],
+                                key="inventory_import_mode"
+                            )
+                            
+                            if import_mode == "Add to existing inventory":
+                                st.session_state.inventory.extend(results['inventory'])
+                            else:
+                                st.session_state.inventory = results['inventory']
+                            
+                            save_inventory()
+                            st.success(f"Saved {len(results['inventory'])} inventory items!")
                         else:
-                            st.session_state.inventory = results['inventory']
-                        
-                        save_inventory()
-                        st.success(f"Saved {len(results['inventory'])} inventory items!")
+                            st.warning("No inventory items were found to save.")
                 else:
                     st.info("No inventory items were extracted.")
             
@@ -284,20 +290,23 @@ with tab3:
                     
                     # Option to save
                     if st.button("Save Extracted Sales"):
-                        # Determine import mode
-                        import_mode = st.radio(
-                            "Import mode:",
-                            ["Add to existing sales", "Replace all sales"],
-                            key="sales_import_mode"
-                        )
-                        
-                        if import_mode == "Add to existing sales":
-                            st.session_state.sales.extend(results['sales'])
+                        if results['sales']:
+                            # Determine import mode
+                            import_mode = st.radio(
+                                "Sales import mode:",
+                                ["Add to existing sales", "Replace all sales"],
+                                key="sales_import_mode"
+                            )
+                            
+                            if import_mode == "Add to existing sales":
+                                st.session_state.sales.extend(results['sales'])
+                            else:
+                                st.session_state.sales = results['sales']
+                            
+                            save_sales()
+                            st.success(f"Saved {len(results['sales'])} sales records!")
                         else:
-                            st.session_state.sales = results['sales']
-                        
-                        save_sales()
-                        st.success(f"Saved {len(results['sales'])} sales records!")
+                            st.warning("No sales records were found to save.")
                 else:
                     st.info("No sales records were extracted.")
             

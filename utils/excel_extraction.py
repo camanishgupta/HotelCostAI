@@ -21,19 +21,55 @@ def safe_read_excel(file_path, sheet_name=0):
         DataFrame: The Excel data as a DataFrame
     """
     try:
-        # First try normal read
-        return pd.read_excel(file_path, sheet_name=sheet_name)
-    except:
-        # If that fails, try with xlrd engine for xls files
-        try:
-            return pd.read_excel(file_path, sheet_name=sheet_name, engine='xlrd')
-        except:
-            # If that fails too, try with openpyxl engine for xlsx files
+        # Try different engines and handle various issues
+        engines = ['openpyxl', 'xlrd']
+        
+        for engine in engines:
             try:
-                return pd.read_excel(file_path, sheet_name=sheet_name, engine='openpyxl')
-            except Exception as e:
-                st.error(f"Failed to read Excel file: {str(e)}")
-                return None
+                # For xlsx files, openpyxl is preferred
+                if file_path.endswith('.xlsx') and engine == 'openpyxl':
+                    return pd.read_excel(file_path, sheet_name=sheet_name, engine=engine)
+                
+                # For xls files, xlrd is preferred
+                if file_path.endswith('.xls') and engine == 'xlrd':
+                    return pd.read_excel(file_path, sheet_name=sheet_name, engine=engine)
+                
+                # Try anyway as fallback
+                try:
+                    return pd.read_excel(file_path, sheet_name=sheet_name, engine=engine)
+                except:
+                    pass
+            except Exception as specific_error:
+                st.warning(f"Error with engine {engine}: {str(specific_error)}")
+                continue
+        
+        # If all engines fail, try a binary read approach
+        st.warning("Trying binary approach for difficult Excel file...")
+        
+        # Use a direct binary approach for stubborn files
+        import tempfile
+        import shutil
+        
+        # Create a temporary copy of the file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            shutil.copy2(file_path, tmp.name)
+            tmp_path = tmp.name
+        
+        try:
+            # Try with default engine
+            df = pd.read_excel(tmp_path, sheet_name=sheet_name)
+            os.unlink(tmp_path)  # Clean up
+            return df
+        except:
+            # Cleanup temp file
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            
+            st.error(f"All methods failed to read Excel file: {os.path.basename(file_path)}")
+            return None
+    except Exception as e:
+        st.error(f"Failed to read Excel file: {str(e)}")
+        return None
 
 def detect_file_type(file_path):
     """
@@ -392,35 +428,78 @@ def extract_inventory_from_excel(file_path):
         list: Extracted inventory items
     """
     try:
-        # Read the Excel file
+        st.info(f"Attempting to extract inventory data from {os.path.basename(file_path)}")
+        
+        # Read the Excel file with improved error handling
         df = safe_read_excel(file_path)
         if df is None or df.empty:
+            st.error(f"Could not read file or file is empty: {os.path.basename(file_path)}")
             return []
             
+        # Display data preview for debugging
+        st.write("Sample data preview:")
+        st.dataframe(df.head(3))
+        
+        # Clean up the dataframe - remove completely empty rows and columns
+        df = df.dropna(how='all').reset_index(drop=True)  # Remove empty rows
+        df = df.loc[:, ~df.isna().all()].reset_index(drop=True)  # Remove empty columns
+        
         # Try to determine the structure
         columns = [str(col).lower() for col in df.columns]
+        st.write("Detected columns:", columns)
         
-        # Define target fields and potential column matches
+        # Define target fields and potential column matches - expanded for better matching
         field_matches = {
-            'item_code': ['item code', 'code', 'sku', 'id', 'item id', 'product code', 'product id'],
-            'name': ['name', 'item name', 'product name', 'description', 'item description'],
-            'category': ['category', 'group', 'department', 'type', 'item type', 'item group'],
-            'price': ['price', 'cost', 'unit price', 'unit cost', 'price per unit', 'rate'],
-            'unit': ['unit', 'uom', 'measure', 'unit of measure', 'unit of measurement'],
-            'supplier': ['supplier', 'vendor', 'source', 'manufacturer'],
-            'stock_level': ['stock', 'quantity', 'on hand', 'level', 'balance', 'inventory', 'qty', 'stock level']
+            'item_code': ['item code', 'code', 'sku', 'id', 'item id', 'product code', 'product id', 'item no', 'item number',
+                         'article number', 'art no', '#', 'no', 'no.', 'number'],
+            'name': ['name', 'item name', 'product name', 'description', 'item description', 'product', 'item',
+                    'goods', 'title', 'product description'],
+            'category': ['category', 'group', 'department', 'type', 'item type', 'item group', 'class', 'classification',
+                        'product group', 'product category', 'product type'],
+            'price': ['price', 'cost', 'unit price', 'unit cost', 'price per unit', 'rate', 'amount', 'value',
+                     'unit value', 'cost price', 'purchase price', 'buying price'],
+            'unit': ['unit', 'uom', 'measure', 'unit of measure', 'unit of measurement', 'measurement unit', 'selling unit',
+                    'purchase unit', 'inventory unit'],
+            'supplier': ['supplier', 'vendor', 'source', 'manufacturer', 'supply', 'provider', 'distributor', 'brand'],
+            'stock_level': ['stock', 'quantity', 'on hand', 'level', 'balance', 'inventory', 'qty', 'stock level',
+                           'current stock', 'available', 'on-hand', 'count', 'qty on hand']
         }
         
-        # Create mapping of our fields to Excel columns
+        # Create mapping of our fields to Excel columns - enhanced for better matching
         mapping = {}
+        mapped_columns = []
+        
+        # First pass - exact matches
         for our_field, possible_matches in field_matches.items():
             for i, col in enumerate(columns):
+                if col in possible_matches:
+                    mapping[our_field] = df.columns[i]
+                    mapped_columns.append(col)
+                    break
+        
+        # Second pass - partial matches if we didn't find exact matches
+        for our_field, possible_matches in field_matches.items():
+            if our_field in mapping:
+                continue  # Skip if already mapped
+                
+            for i, col in enumerate(columns):
+                if col in mapped_columns:
+                    continue  # Skip if column already mapped
+                    
                 if any(match in col for match in possible_matches):
                     mapping[our_field] = df.columns[i]
+                    mapped_columns.append(col)
                     break
+        
+        # Display the mapping for debugging
+        st.write("Column mapping:")
+        for our_field, excel_col in mapping.items():
+            st.write(f"- {our_field}: {excel_col}")
         
         # If we couldn't map critical fields, try AI mapping
         if 'name' not in mapping or ('price' not in mapping and 'stock_level' not in mapping):
+            st.warning("Critical fields not mapped. Attempting AI-based mapping...")
+            
             # Convert to dict for AI processing
             sample_data = df.head(5).to_dict()
             target_schema = {
@@ -439,58 +518,105 @@ def extract_inventory_from_excel(file_path):
                 for our_field, excel_col in ai_mapping.items():
                     if excel_col is not None:
                         mapping[our_field] = excel_col
+                        st.write(f"AI mapped {our_field} to {excel_col}")
         
         # Process the data using the mapping
         inventory_items = []
+        skipped_items = 0
         
-        for _, row in df.iterrows():
-            item = InventoryItem()
-            
-            # Extract mapped fields
-            for our_field, excel_col in mapping.items():
-                if excel_col in row:
-                    value = row[excel_col]
-                    
-                    # Handle NaN
-                    if pd.isna(value):
-                        continue
-                    
-                    # Convert to appropriate type
-                    if our_field in ['price', 'stock_level']:
-                        try:
-                            value = float(value)
-                        except:
+        # Skip header rows if they exist
+        start_row = 0
+        for idx, row in df.iterrows():
+            row_values = [str(val).lower() for val in row.values if not pd.isna(val)]
+            header_keywords = ['item', 'product', 'code', 'name', 'description', 'price', 'quantity']
+            if any(keyword in ' '.join(row_values) for keyword in header_keywords):
+                start_row = idx + 1
+                break
+        
+        st.info(f"Starting data extraction from row {start_row}")
+        
+        # Process each row
+        for idx, row in df.iloc[start_row:].iterrows():
+            try:
+                # Skip rows that are likely headers or completely empty
+                if all(pd.isna(val) for val in row.values):
+                    continue
+                
+                item = InventoryItem()
+                has_data = False
+                
+                # Extract mapped fields
+                for our_field, excel_col in mapping.items():
+                    if excel_col in row:
+                        value = row[excel_col]
+                        
+                        # Handle NaN
+                        if pd.isna(value):
                             continue
-                    else:
-                        value = str(value)
-                    
-                    # Set attribute
-                    setattr(item, our_field, value)
+                        
+                        # Convert to appropriate type
+                        if our_field in ['price', 'stock_level']:
+                            try:
+                                if isinstance(value, str):
+                                    # Clean up the string - remove currency symbols, commas, etc.
+                                    value = re.sub(r'[^\d\.\-\,]', '', value).replace(',', '')
+                                value = float(value) if value else 0.0
+                                has_data = True
+                            except:
+                                continue
+                        else:
+                            value = str(value).strip()
+                            if value:  # Only set if not empty
+                                has_data = True
+                        
+                        # Set attribute
+                        setattr(item, our_field, value)
+                
+                # Look for data in unmapped columns for name if missing
+                if not item.name and has_data:
+                    for col in df.columns:
+                        if col not in mapping.values():
+                            val = row[col]
+                            if not pd.isna(val) and isinstance(val, str) and len(val.strip()) > 2:
+                                item.name = val.strip()
+                                break
+                
+                # Skip if no name or no meaningful data
+                if not item.name or not has_data:
+                    skipped_items += 1
+                    continue
+                
+                # Generate item code if missing
+                if not item.item_code:
+                    item.item_code = f"ITEM{len(inventory_items) + 1}"
+                
+                # Set default category if missing
+                if not item.category:
+                    item.category = "Uncategorized"
+                
+                # Set default unit if missing
+                if not item.unit:
+                    item.unit = "each"
+                
+                # Set timestamp
+                item.created_at = datetime.now().isoformat()
+                item.updated_at = datetime.now().isoformat()
+                
+                # Add to list
+                inventory_items.append(item.to_dict())
+                
+                # Debug info for first few items
+                if len(inventory_items) <= 3:
+                    st.write(f"Extracted item {len(inventory_items)}: {item.name}")
             
-            # Skip if no name or both price and stock are missing
-            if not item.name or (item.price == 0 and item.stock_level == 0):
+            except Exception as row_error:
+                st.warning(f"Error processing row {idx}: {str(row_error)}")
+                skipped_items += 1
                 continue
-                
-            # Generate item code if missing
-            if not item.item_code:
-                item.item_code = f"ITEM{len(inventory_items) + 1}"
-                
-            # Set default category if missing
-            if not item.category:
-                item.category = "Uncategorized"
-                
-            # Set default unit if missing
-            if not item.unit:
-                item.unit = "each"
-                
-            # Set timestamp
-            item.created_at = datetime.now().isoformat()
-            item.updated_at = datetime.now().isoformat()
-            
-            # Add to list
-            inventory_items.append(item.to_dict())
         
+        st.success(f"Successfully extracted {len(inventory_items)} inventory items. Skipped {skipped_items} rows.")
         return inventory_items
+    
     except Exception as e:
         st.error(f"Error extracting inventory: {str(e)}")
         return []
