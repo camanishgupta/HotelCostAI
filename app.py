@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import os
 import json
 from datetime import datetime
-from utils.openai_utils import query_ai_assistant
-from utils.data_processing import load_data, save_data
 
 # Set page configuration
 st.set_page_config(
@@ -14,170 +13,161 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state variables if they don't exist
-if 'recipes' not in st.session_state:
-    if os.path.exists('data/recipes.json'):
-        st.session_state.recipes = load_data('data/recipes.json')
-    else:
-        st.session_state.recipes = []
-
-if 'inventory' not in st.session_state:
-    if os.path.exists('data/inventory.json'):
-        st.session_state.inventory = load_data('data/inventory.json')
-    else:
-        st.session_state.inventory = []
-
-if 'sales' not in st.session_state:
-    if os.path.exists('data/sales.json'):
-        st.session_state.sales = load_data('data/sales.json')
-    else:
-        st.session_state.sales = []
-
-if 'column_mappings' not in st.session_state:
-    if os.path.exists('data/column_mappings.json'):
-        st.session_state.column_mappings = load_data('data/column_mappings.json')
-    else:
-        st.session_state.column_mappings = {}
-
 # Create necessary directories if they don't exist
 os.makedirs('data', exist_ok=True)
+os.makedirs('data/uploaded', exist_ok=True)
 
 # Main page header
 st.title("🏨 Hotel Cost Control System")
-st.markdown("### AI-powered cost management for hotels and restaurants")
+st.markdown("""
+Welcome to the AI-powered hotel cost control system. This application helps you manage recipes, 
+track inventory, analyze sales, forecast demand, and generate insightful reports.
 
-# Dashboard overview
+Use the sidebar navigation to access different features of the system.
+""")
+
+# Display system overview metrics
+st.subheader("System Overview")
+
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.metric(
-        "Total Recipes", 
-        len(st.session_state.recipes), 
-        help="Total number of recipes in the system"
-    )
-
-with col2:
-    st.metric(
-        "Inventory Items", 
-        len(st.session_state.inventory), 
-        help="Number of items in inventory"
-    )
-
-with col3:
-    # Calculate average cost if recipes exist
-    if st.session_state.recipes:
-        avg_cost = sum(recipe.get('total_cost', 0) for recipe in st.session_state.recipes) / len(st.session_state.recipes)
-        st.metric("Avg Recipe Cost", f"${avg_cost:.2f}")
+# Try to load data from files
+try:
+    if os.path.exists('data/recipes.json'):
+        with open('data/recipes.json', 'r') as f:
+            recipes = json.load(f)
     else:
-        st.metric("Avg Recipe Cost", "$0.00")
+        recipes = []
+except:
+    recipes = []
 
-# Features overview
-st.markdown("## Key Features")
+try:
+    if os.path.exists('data/inventory.json'):
+        with open('data/inventory.json', 'r') as f:
+            inventory = json.load(f)
+    else:
+        inventory = []
+except:
+    inventory = []
 
-feature_col1, feature_col2 = st.columns(2)
+try:
+    if os.path.exists('data/sales.json'):
+        with open('data/sales.json', 'r') as f:
+            sales = json.load(f)
+    else:
+        sales = []
+except:
+    sales = []
 
-with feature_col1:
-    st.markdown("### Recipe Management")
-    st.markdown("- Interactive recipe creation with cost calculation")
-    st.markdown("- AI extraction from Excel and Word documents")
-    st.markdown("- Price change impact analysis")
+# Display metrics
+with col1:
+    st.metric("Recipes", len(recipes))
     
-    st.markdown("### Inventory Control")
-    st.markdown("- Stock item tracking and management")
-    st.markdown("- Ingredient consumption monitoring")
-    st.markdown("- Price change alerts")
-
-with feature_col2:
-    st.markdown("### Sales Analysis")
-    st.markdown("- Popular items tracking")
-    st.markdown("- Menu performance insights")
-    st.markdown("- Ingredient usage patterns")
+with col2:
+    st.metric("Inventory Items", len(inventory))
     
-    st.markdown("### AI-Powered Insights")
-    st.markdown("- Demand forecasting for ingredients")
-    st.markdown("- Natural language reporting")
-    st.markdown("- Menu optimization recommendations")
+with col3:
+    st.metric("Sales Records", len(sales))
 
-# Quick access section
-st.markdown("## Quick Access")
-quick_action = st.selectbox(
-    "I want to...",
-    [
-        "Select an action",
-        "Create a new recipe",
-        "Upload inventory data",
-        "Upload sales data",
-        "Get AI insights about my business",
-        "Check price change impacts"
-    ]
-)
+# Recent activity
+st.subheader("Recent Activity")
 
-if quick_action == "Create a new recipe":
-    st.switch_page("pages/01_Recipe_Management.py")
-elif quick_action == "Upload inventory data":
-    st.switch_page("pages/02_Inventory_Management.py")
-elif quick_action == "Upload sales data":
-    st.switch_page("pages/03_Sales_Analysis.py")
-elif quick_action == "Get AI insights about my business" or quick_action == "Check price change impacts":
-    st.switch_page("pages/04_Reports_and_Insights.py")
-
-# Recent activity section
-st.markdown("## Recent Activity")
-
-# Get most recent data from each category
-recent_items = []
+# Combine recent activity from all data sources
+activity = []
 
 # Add recent recipes
-for recipe in st.session_state.recipes[-3:]:
-    recent_items.append({
+for recipe in recipes[-5:]:
+    activity.append({
         "type": "Recipe",
-        "name": recipe.get('name', 'Unnamed Recipe'),
-        "date": recipe.get('created_at', 'Unknown date'),
-        "details": f"Cost: ${recipe.get('total_cost', 0):.2f}"
+        "name": recipe.get("name", "Unnamed Recipe"),
+        "date": recipe.get("updated_at", ""),
+        "details": f"Cost: ${recipe.get('total_cost', 0):.2f}, Yield: {recipe.get('yield_amount', 0)} {recipe.get('yield_unit', 'serving')}"
     })
 
 # Add recent inventory updates
-for item in st.session_state.inventory[-3:]:
-    recent_items.append({
+for item in inventory[-5:]:
+    activity.append({
         "type": "Inventory",
-        "name": item.get('name', 'Unnamed Item'),
-        "date": item.get('updated_at', 'Unknown date'),
-        "details": f"Price: ${item.get('price', 0):.2f} per {item.get('unit', 'unit')}"
+        "name": item.get("name", "Unnamed Item"),
+        "date": item.get("updated_at", ""),
+        "details": f"Price: ${item.get('price', 0):.2f}, Stock: {item.get('stock_level', 0)} {item.get('unit', '')}"
     })
 
-# Sort by date (newest first) and take top 5
-if recent_items:
-    recent_df = pd.DataFrame(recent_items)
-    try:
-        recent_df['date'] = pd.to_datetime(recent_df['date'])
-        recent_df = recent_df.sort_values('date', ascending=False).head(5)
-    except:
-        # If date parsing fails, just show the items as they are
-        recent_df = recent_df.head(5)
-    
-    st.dataframe(recent_df, hide_index=True)
+# Add recent sales records
+for record in sales[-5:]:
+    activity.append({
+        "type": "Sales",
+        "name": record.get("item_name", "Unnamed Item"),
+        "date": record.get("date", ""),
+        "details": f"Quantity: {record.get('quantity', 0)}, Revenue: ${record.get('revenue', 0):.2f}, Profit: ${record.get('profit', 0):.2f}"
+    })
+
+# Sort by date (assuming ISO format)
+try:
+    activity.sort(key=lambda x: x["date"], reverse=True)
+except:
+    pass
+
+# Display recent activity
+if activity:
+    activity_df = pd.DataFrame(activity[:10])  # Show top 10 most recent
+    st.dataframe(activity_df)
 else:
-    st.info("No recent activity found. Start by creating recipes or uploading inventory data.")
+    st.info("No recent activity to display. Start by adding recipes, inventory items, or sales records.")
 
-# AI chat assistant
-st.markdown("## AI Assistant")
-user_question = st.text_input("Ask anything about your hotel's cost management:", placeholder="E.g., 'What are my most expensive recipes?'")
+# Quick actions section
+st.subheader("Quick Actions")
 
-if user_question:
-    with st.spinner("Getting AI insights..."):
-        # Prepare context from our data
-        context = {
-            "recipes_count": len(st.session_state.recipes),
-            "inventory_count": len(st.session_state.inventory),
-            "sales_count": len(st.session_state.sales),
-            "recipes_sample": st.session_state.recipes[:5] if st.session_state.recipes else [],
-            "inventory_sample": st.session_state.inventory[:5] if st.session_state.inventory else [],
-            "sales_sample": st.session_state.sales[:5] if st.session_state.sales else []
-        }
-        
-        response = query_ai_assistant(user_question, context)
-        st.markdown(f"**Answer:**\n{response}")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("### Add Recipe")
+    st.markdown("Go to the Recipe Management page to create a new recipe or import from Excel")
+    if st.button("Go to Recipes"):
+        st.switch_page("pages/01_Recipe_Management.py")
+
+with col2:
+    st.markdown("### Update Inventory")
+    st.markdown("Go to the Inventory Management page to update stock or import data")
+    if st.button("Go to Inventory"):
+        st.switch_page("pages/02_Inventory_Management.py")
+
+with col3:
+    st.markdown("### Import Data")
+    st.markdown("Go to the Data Extraction page to extract and clean data from Excel files")
+    if st.button("Go to Data Extraction"):
+        st.switch_page("pages/05_Data_Extraction.py")
+
+# Help section
+st.subheader("Help & Tips")
+
+with st.expander("Getting Started"):
+    st.markdown("""
+    ### Getting Started with the Hotel Cost Control System
+    
+    1. **Add your recipes** - Create recipes manually or import from Excel files
+    2. **Set up your inventory** - Add ingredients and stock levels
+    3. **Record sales** - Track sales data by item
+    4. **Generate reports** - Analyze costs and sales performance
+    
+    Use the AI-powered features to get insights from your data and forecast future needs.
+    """)
+
+with st.expander("AI Features"):
+    st.markdown("""
+    ### AI-Powered Features
+    
+    The system includes several AI capabilities:
+    
+    - **Automatic data extraction** from Excel and Word files
+    - **Column mapping** to match your data to the system
+    - **Natural language reporting** to generate insights
+    - **Price change analysis** to understand cost impacts
+    - **Demand forecasting** to optimize inventory
+    
+    These features use OpenAI's advanced models to save you time and provide deeper insights.
+    """)
 
 # Footer
 st.markdown("---")
-st.markdown("© 2023 Hotel Cost Control System | Powered by AI")
+st.markdown("© 2025 Hotel Cost Control System | Powered by AI")

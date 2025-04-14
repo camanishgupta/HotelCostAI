@@ -1,18 +1,15 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import os
 import json
-import io
 from datetime import datetime
-from utils.openai_utils import extract_recipe_from_document
-from utils.data_processing import calculate_recipe_cost, load_data, save_data
+from utils.data_processing import load_data, save_data, process_excel_upload, calculate_recipe_cost
 from models.recipe import Recipe
 
 # Set page configuration
 st.set_page_config(
     page_title="Recipe Management",
-    page_icon="🍳",
+    page_icon="📝",
     layout="wide"
 )
 
@@ -29,489 +26,353 @@ if 'inventory' not in st.session_state:
     else:
         st.session_state.inventory = []
 
-if 'edit_recipe_index' not in st.session_state:
-    st.session_state.edit_recipe_index = -1
-
-if 'new_recipe' not in st.session_state:
-    st.session_state.new_recipe = Recipe().to_dict()
-
-# Create necessary directories if they don't exist
-os.makedirs('data', exist_ok=True)
-
 # Helper function to save recipes
 def save_recipes():
     save_data(st.session_state.recipes, 'data/recipes.json')
 
 # Helper function to clear recipe form
 def clear_recipe_form():
-    st.session_state.new_recipe = Recipe().to_dict()
-    st.session_state.edit_recipe_index = -1
+    st.session_state.new_recipe_name = ""
+    st.session_state.new_recipe_yield_amount = 1
+    st.session_state.new_recipe_yield_unit = "serving"
+    st.session_state.new_recipe_ingredients = []
+    st.session_state.new_recipe_preparation_steps = []
 
-# Main page header
-st.title("🍳 Recipe Management")
-st.markdown("Create, edit, and manage your recipes with cost calculations")
+# Initialize recipe form state if needed
+if 'new_recipe_name' not in st.session_state:
+    st.session_state.new_recipe_name = ""
+if 'new_recipe_yield_amount' not in st.session_state:
+    st.session_state.new_recipe_yield_amount = 1
+if 'new_recipe_yield_unit' not in st.session_state:
+    st.session_state.new_recipe_yield_unit = "serving"
+if 'new_recipe_ingredients' not in st.session_state:
+    st.session_state.new_recipe_ingredients = []
+if 'new_recipe_preparation_steps' not in st.session_state:
+    st.session_state.new_recipe_preparation_steps = []
 
-# Create tabs for different recipe management functions
-tab1, tab2, tab3, tab4 = st.tabs(["Recipe List", "Create & Edit", "Import Recipes", "Cost Analysis"])
+# Page title
+st.title("📝 Recipe Management")
+st.markdown("Create, edit, and manage your recipes")
+
+# Create tabs for different sections
+tab1, tab2, tab3 = st.tabs(["Recipe List", "Add Recipe", "Import Recipes"])
 
 with tab1:
-    st.subheader("Recipe Library")
+    st.subheader("Recipe List")
     
-    # Search and filter
-    search_term = st.text_input("Search recipes", key="recipe_search")
+    # Filter and sort options
+    col1, col2 = st.columns(2)
     
-    filtered_recipes = st.session_state.recipes
-    if search_term:
-        filtered_recipes = [
-            recipe for recipe in st.session_state.recipes 
-            if search_term.lower() in recipe.get('name', '').lower()
-        ]
-    
-    if not filtered_recipes:
-        st.info("No recipes found. Create a new recipe or import from documents.")
-    else:
-        # Display recipes in a grid
-        cols = st.columns(3)
-        for i, recipe in enumerate(filtered_recipes):
-            with cols[i % 3]:
-                with st.container(border=True):
-                    st.subheader(recipe.get('name', 'Unnamed Recipe'))
-                    st.write(f"Yield: {recipe.get('yield_amount', 1)} {recipe.get('yield_unit', 'serving')}")
-                    st.write(f"Total Cost: ${recipe.get('total_cost', 0):.2f}")
-                    st.write(f"Cost per {recipe.get('yield_unit', 'serving')}: ${recipe.get('cost_per_unit', 0):.2f}")
-                    
-                    # Show ingredient count 
-                    ingredients = recipe.get('ingredients', [])
-                    st.write(f"Ingredients: {len(ingredients)}")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("Edit", key=f"edit_{i}"):
-                            st.session_state.edit_recipe_index = i
-                            st.session_state.new_recipe = recipe.copy()
-                            st.switch_page("pages/01_Recipe_Management.py")
-                    with col2:
-                        if st.button("Delete", key=f"delete_{i}"):
-                            st.session_state.recipes.pop(i)
-                            save_recipes()
-                            st.rerun()
-
-with tab2:
-    st.subheader("Recipe Creator")
-    
-    # Recipe form
-    form_col1, form_col2 = st.columns([3, 2])
-    
-    with form_col1:
-        recipe_name = st.text_input("Recipe Name", st.session_state.new_recipe.get('name', ''))
-        
-        # Yield information
-        yield_col1, yield_col2 = st.columns(2)
-        with yield_col1:
-            yield_amount = st.number_input("Yield Amount", min_value=1, value=st.session_state.new_recipe.get('yield_amount', 1), step=1)
-        with yield_col2:
-            yield_unit = st.text_input("Yield Unit", st.session_state.new_recipe.get('yield_unit', 'serving'))
-        
-        # Show a dataframe for entering ingredients
-        st.subheader("Ingredients")
-        
-        # Use inventory items as a reference for units and costs
-        inventory_items = [item.get('name', '') for item in st.session_state.inventory]
-        
-        # Check if ingredients exist in new_recipe
-        if 'ingredients' not in st.session_state.new_recipe:
-            st.session_state.new_recipe['ingredients'] = []
-        
-        # Create a DataFrame for editing ingredients
-        if st.session_state.new_recipe['ingredients']:
-            ingredient_data = pd.DataFrame(st.session_state.new_recipe['ingredients'])
-        else:
-            ingredient_data = pd.DataFrame(columns=['name', 'amount', 'unit', 'cost'])
-        
-        # Create an editable dataframe
-        edited_ingredients = st.data_editor(
-            ingredient_data,
-            key="ingredient_editor",
-            num_rows="dynamic",
-            column_config={
-                'name': st.column_config.SelectboxColumn(
-                    'Ingredient Name',
-                    options=inventory_items,
-                    required=True,
-                ),
-                'amount': st.column_config.NumberColumn(
-                    'Amount',
-                    min_value=0.01,
-                    format="%.2f",
-                    required=True,
-                ),
-                'unit': st.column_config.TextColumn(
-                    'Unit',
-                    default="g",
-                    required=True,
-                ),
-                'cost': st.column_config.NumberColumn(
-                    'Cost ($)',
-                    min_value=0.0,
-                    format="%.2f",
-                )
-            },
-            hide_index=True
-        )
-        
-        # Update the ingredients in the new_recipe
-        st.session_state.new_recipe['ingredients'] = edited_ingredients.to_dict('records')
-        
-        # Preparation steps
-        st.subheader("Preparation Steps")
-        prep_steps = st.text_area(
-            "Enter preparation steps (one per line)",
-            value="\n".join(st.session_state.new_recipe.get('preparation_steps', [])),
-            height=150
-        )
-        
-        # Convert the preparation steps text to a list
-        st.session_state.new_recipe['preparation_steps'] = [
-            step.strip() for step in prep_steps.split('\n') if step.strip()
-        ]
-    
-    with form_col2:
-        st.subheader("Cost Calculation")
-        
-        # Calculate costs if there are ingredients
-        if st.session_state.new_recipe['ingredients']:
-            # Calculate cost using inventory data
-            total_cost = calculate_recipe_cost(st.session_state.new_recipe, st.session_state.inventory)
-            
-            # Update the recipe with the calculated cost
-            st.session_state.new_recipe['total_cost'] = total_cost
-            
-            if yield_amount > 0:
-                st.session_state.new_recipe['cost_per_unit'] = total_cost / yield_amount
-            else:
-                st.session_state.new_recipe['cost_per_unit'] = 0
-            
-            # Display cost information
-            st.metric("Total Recipe Cost", f"${total_cost:.2f}")
-            st.metric(f"Cost per {yield_unit}", f"${st.session_state.new_recipe['cost_per_unit']:.2f}")
-            
-            # Display missing ingredients warning
-            missing_ingredients = [
-                ing['name'] for ing in st.session_state.new_recipe['ingredients'] 
-                if ing.get('missing', False)
-            ]
-            
-            if missing_ingredients:
-                st.warning(f"⚠️ Missing from inventory: {', '.join(missing_ingredients)}")
-                st.write("Add these items to your inventory for accurate cost calculation.")
-        else:
-            st.info("Add ingredients to calculate recipe cost.")
-        
-        # Display recipe scaling tool
-        st.subheader("Recipe Scaling")
-        new_yield = st.number_input(
-            f"Scale recipe to (in {yield_unit})",
-            min_value=1,
-            value=yield_amount,
-            step=1
-        )
-        
-        if new_yield != yield_amount:
-            scale_factor = new_yield / yield_amount
-            st.write(f"Scale factor: {scale_factor:.2f}x")
-            
-            if 'total_cost' in st.session_state.new_recipe:
-                new_cost = st.session_state.new_recipe['total_cost'] * scale_factor
-                st.write(f"New total cost: ${new_cost:.2f}")
-    
-    # Save/update button
-    col1, col2 = st.columns([1, 1])
     with col1:
-        if st.button("Clear Form"):
-            clear_recipe_form()
-            st.rerun()
+        search_term = st.text_input("Search recipes", "")
     
     with col2:
-        # Update recipe name and yield from form
-        st.session_state.new_recipe['name'] = recipe_name
-        st.session_state.new_recipe['yield_amount'] = yield_amount
-        st.session_state.new_recipe['yield_unit'] = yield_unit
-        
-        # Add timestamp
-        st.session_state.new_recipe['updated_at'] = datetime.now().isoformat()
-        
-        if st.button("Save Recipe"):
-            if not recipe_name:
-                st.error("Recipe name is required!")
-            elif not st.session_state.new_recipe['ingredients']:
-                st.error("At least one ingredient is required!")
-            else:
-                if st.session_state.edit_recipe_index >= 0:
-                    # Update existing recipe
-                    st.session_state.recipes[st.session_state.edit_recipe_index] = st.session_state.new_recipe
-                    st.success(f"Recipe '{recipe_name}' updated!")
-                else:
-                    # Add created_at timestamp for new recipes
-                    st.session_state.new_recipe['created_at'] = datetime.now().isoformat()
-                    
-                    # Add new recipe
-                    st.session_state.recipes.append(st.session_state.new_recipe)
-                    st.success(f"Recipe '{recipe_name}' created!")
-                
-                # Save recipes to file
-                save_recipes()
-                
-                # Clear the form for a new recipe
-                clear_recipe_form()
-                st.rerun()
-
-with tab3:
-    st.subheader("Import Recipes")
-    st.write("Upload recipe documents to automatically extract recipe information using AI")
+        sort_by = st.selectbox(
+            "Sort by",
+            ["Name (A-Z)", "Name (Z-A)", "Cost (Low to High)", "Cost (High to Low)"]
+        )
     
-    # File uploader
-    uploaded_file = st.file_uploader("Upload recipe document", type=['xlsx', 'docx', 'txt'])
+    # Apply filters and sorting
+    filtered_recipes = st.session_state.recipes.copy()
     
-    if uploaded_file:
-        # Determine file type
-        file_type = None
-        if uploaded_file.name.endswith('.xlsx'):
-            file_type = 'excel'
-        elif uploaded_file.name.endswith('.docx'):
-            file_type = 'word'
-        elif uploaded_file.name.endswith('.txt'):
-            file_type = 'text'
-        
-        # Show extraction button
-        if st.button("Extract Recipe"):
-            with st.spinner("Extracting recipe using AI..."):
-                # Read file data
-                file_data = uploaded_file.read()
+    # Search filter
+    if search_term:
+        filtered_recipes = [
+            recipe for recipe in filtered_recipes
+            if search_term.lower() in recipe.get("name", "").lower()
+        ]
+    
+    # Sorting
+    if sort_by == "Name (A-Z)":
+        filtered_recipes.sort(key=lambda x: x.get("name", "").lower())
+    elif sort_by == "Name (Z-A)":
+        filtered_recipes.sort(key=lambda x: x.get("name", "").lower(), reverse=True)
+    elif sort_by == "Cost (Low to High)":
+        filtered_recipes.sort(key=lambda x: x.get("total_cost", 0))
+    elif sort_by == "Cost (High to Low)":
+        filtered_recipes.sort(key=lambda x: x.get("total_cost", 0), reverse=True)
+    
+    # Display recipes
+    if filtered_recipes:
+        for i, recipe in enumerate(filtered_recipes):
+            with st.expander(f"{recipe.get('name', 'Unnamed Recipe')} - ${recipe.get('total_cost', 0):.2f}"):
+                col1, col2 = st.columns([3, 1])
                 
-                # Extract recipe using AI
-                extracted_recipe = extract_recipe_from_document(file_data, file_type)
-                
-                if "error" in extracted_recipe:
-                    st.error(f"Failed to extract recipe: {extracted_recipe['error']}")
-                else:
-                    # Display extracted recipe
-                    st.success("Recipe extracted successfully!")
+                with col1:
+                    st.markdown(f"**Yield:** {recipe.get('yield_amount', 1)} {recipe.get('yield_unit', 'serving')}")
+                    st.markdown(f"**Cost per {recipe.get('yield_unit', 'serving')}:** ${recipe.get('cost_per_unit', 0):.2f}")
                     
-                    with st.expander("Review Extracted Recipe", expanded=True):
-                        st.subheader(extracted_recipe.get('name', 'Unnamed Recipe'))
-                        
-                        yield_amount = extracted_recipe.get('yield_amount', 1)
-                        yield_unit = extracted_recipe.get('yield_unit', 'serving')
-                        st.write(f"Yield: {yield_amount} {yield_unit}")
-                        
-                        st.subheader("Ingredients")
-                        ingredients = extracted_recipe.get('ingredients', [])
-                        if ingredients:
-                            ingredients_df = pd.DataFrame(ingredients)
-                            st.dataframe(ingredients_df)
-                        else:
-                            st.info("No ingredients extracted.")
-                        
-                        st.subheader("Preparation")
-                        prep_steps = extracted_recipe.get('preparation_steps', [])
-                        if prep_steps:
-                            for i, step in enumerate(prep_steps, 1):
-                                st.write(f"{i}. {step}")
-                        else:
-                            st.info("No preparation steps extracted.")
+                    st.subheader("Ingredients")
+                    ingredient_data = []
                     
-                    # Calculate cost using inventory data
-                    total_cost = calculate_recipe_cost(extracted_recipe, st.session_state.inventory)
-                    extracted_recipe['total_cost'] = total_cost
+                    for ingredient in recipe.get("ingredients", []):
+                        ingredient_data.append({
+                            "Name": ingredient.get("name", ""),
+                            "Amount": ingredient.get("amount", 0),
+                            "Unit": ingredient.get("unit", ""),
+                            "Cost": f"${ingredient.get('cost', 0):.2f}"
+                        })
                     
-                    if yield_amount > 0:
-                        extracted_recipe['cost_per_unit'] = total_cost / yield_amount
+                    if ingredient_data:
+                        st.table(pd.DataFrame(ingredient_data))
                     else:
-                        extracted_recipe['cost_per_unit'] = 0
+                        st.info("No ingredients specified.")
                     
-                    st.metric("Calculated Total Cost", f"${total_cost:.2f}")
+                    st.subheader("Preparation Steps")
+                    for j, step in enumerate(recipe.get("preparation_steps", [])):
+                        st.markdown(f"{j+1}. {step}")
                     
-                    # Option to save or edit
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("Save Recipe As Is"):
-                            st.session_state.recipes.append(extracted_recipe)
-                            save_recipes()
-                            st.success(f"Recipe '{extracted_recipe.get('name', 'Unnamed Recipe')}' saved!")
-                            st.rerun()
-                    
-                    with col2:
-                        if st.button("Edit Before Saving"):
-                            st.session_state.new_recipe = extracted_recipe
-                            st.session_state.edit_recipe_index = -1  # New recipe
-                            st.switch_page("pages/01_Recipe_Management.py")
-        
-        # Batch import section
-        st.subheader("Batch Import")
-        st.write("For Excel files containing multiple recipes, you can import them all at once.")
-        
-        if uploaded_file.name.endswith('.xlsx') and st.button("Batch Import Recipes"):
-            with st.spinner("Processing batch import..."):
-                # Read Excel file
-                df = pd.read_excel(uploaded_file)
+                    if not recipe.get("preparation_steps", []):
+                        st.info("No preparation steps specified.")
                 
-                # Sample data to determine structure
-                sample_data = df.head(5).to_dict()
-                
-                # Display preview
-                st.write("Preview of imported data:")
-                st.dataframe(df.head())
-                
-                # Ask user to confirm import
-                if st.button("Confirm Batch Import"):
-                    # Process each row as a separate recipe
-                    # This is a simplified implementation - real batch import would use
-                    # more sophisticated AI mapping and extraction
-                    imported_count = 0
-                    
-                    for _, row in df.iterrows():
-                        # Create a basic recipe from each row
-                        # This is just a placeholder implementation
-                        recipe = {
-                            "name": row.iloc[0] if not pd.isna(row.iloc[0]) else f"Imported Recipe {imported_count+1}",
-                            "ingredients": [],
-                            "yield_amount": 1,
-                            "yield_unit": "serving",
-                            "preparation_steps": [],
-                            "total_cost": 0,
-                            "cost_per_unit": 0,
-                            "created_at": datetime.now().isoformat(),
-                            "updated_at": datetime.now().isoformat()
-                        }
-                        
-                        st.session_state.recipes.append(recipe)
-                        imported_count += 1
-                    
-                    if imported_count > 0:
+                with col2:
+                    # Actions
+                    if st.button("Delete Recipe", key=f"delete_{i}"):
+                        st.session_state.recipes.remove(recipe)
                         save_recipes()
-                        st.success(f"Imported {imported_count} recipes!")
+                        st.success("Recipe deleted!")
                         st.rerun()
-
-with tab4:
-    st.subheader("Recipe Cost Analysis")
-    
-    if not st.session_state.recipes:
-        st.info("No recipes found. Create recipes to analyze costs.")
+                    
+                    # Scale recipe
+                    new_yield = st.number_input(
+                        "Scale recipe to yield:",
+                        min_value=1,
+                        value=recipe.get("yield_amount", 1),
+                        key=f"scale_{i}"
+                    )
+                    
+                    if st.button("Scale Recipe", key=f"scale_btn_{i}"):
+                        # Create Recipe object
+                        recipe_obj = Recipe.from_dict(recipe)
+                        
+                        # Scale recipe
+                        scaled_recipe = recipe_obj.scale_recipe(new_yield)
+                        
+                        # Display scaled recipe
+                        st.subheader("Scaled Recipe")
+                        st.markdown(f"**New Yield:** {scaled_recipe.yield_amount} {scaled_recipe.yield_unit}")
+                        st.markdown(f"**New Cost:** ${scaled_recipe.total_cost:.2f}")
+                        
+                        ingredient_data = []
+                        for ingredient in scaled_recipe.ingredients:
+                            ingredient_data.append({
+                                "Name": ingredient.get("name", ""),
+                                "Amount": ingredient.get("amount", 0),
+                                "Unit": ingredient.get("unit", ""),
+                                "Cost": f"${ingredient.get('cost', 0):.2f}"
+                            })
+                        
+                        if ingredient_data:
+                            st.table(pd.DataFrame(ingredient_data))
     else:
-        # Prepare data for charts
-        recipe_names = [recipe.get('name', f"Recipe {i}") for i, recipe in enumerate(st.session_state.recipes)]
-        recipe_costs = [recipe.get('total_cost', 0) for recipe in st.session_state.recipes]
-        cost_per_unit = [recipe.get('cost_per_unit', 0) for recipe in st.session_state.recipes]
+        st.info("No recipes found. Add some recipes to get started!")
+
+with tab2:
+    st.subheader("Add New Recipe")
+    
+    # Recipe form
+    recipe_name = st.text_input("Recipe Name", st.session_state.new_recipe_name)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        yield_amount = st.number_input("Yield Amount", min_value=1, value=st.session_state.new_recipe_yield_amount)
+    
+    with col2:
+        yield_unit = st.text_input("Yield Unit", st.session_state.new_recipe_yield_unit)
+    
+    # Ingredients section
+    st.subheader("Ingredients")
+    
+    # Display current ingredients
+    if st.session_state.new_recipe_ingredients:
+        ingredient_data = []
+        for i, ingredient in enumerate(st.session_state.new_recipe_ingredients):
+            ingredient_data.append({
+                "Name": ingredient.get("name", ""),
+                "Amount": ingredient.get("amount", 0),
+                "Unit": ingredient.get("unit", ""),
+                "Cost": ingredient.get("cost", 0)
+            })
         
-        # Combine data for sorting
-        cost_data = list(zip(recipe_names, recipe_costs, cost_per_unit))
+        st.table(pd.DataFrame(ingredient_data))
+    
+    # Add ingredient form
+    with st.form("add_ingredient_form"):
+        st.subheader("Add Ingredient")
         
-        # Sort options
-        sort_option = st.radio(
-            "Sort recipes by:",
-            ["Total Cost (High to Low)", "Total Cost (Low to High)", "Cost per Unit (High to Low)", "Cost per Unit (Low to High)"]
-        )
+        col1, col2, col3 = st.columns(3)
         
-        if sort_option == "Total Cost (High to Low)":
-            cost_data.sort(key=lambda x: x[1], reverse=True)
-        elif sort_option == "Total Cost (Low to High)":
-            cost_data.sort(key=lambda x: x[1])
-        elif sort_option == "Cost per Unit (High to Low)":
-            cost_data.sort(key=lambda x: x[2], reverse=True)
-        else:  # "Cost per Unit (Low to High)"
-            cost_data.sort(key=lambda x: x[2])
+        with col1:
+            new_ingredient_name = st.text_input("Ingredient Name")
         
-        # Unpack sorted data
-        recipe_names, recipe_costs, cost_per_unit = zip(*cost_data)
+        with col2:
+            new_ingredient_amount = st.number_input("Amount", min_value=0.0, step=0.1, value=1.0)
         
-        # Limit to top 10 for better visualization
-        recipe_names = recipe_names[:10]
-        recipe_costs = recipe_costs[:10]
-        cost_per_unit = cost_per_unit[:10]
+        with col3:
+            new_ingredient_unit = st.selectbox(
+                "Unit",
+                ["g", "kg", "ml", "L", "tbsp", "tsp", "cup", "oz", "lb", "pcs", "each", "slice", "whole"]
+            )
         
-        # Create a DataFrame for the chart
-        chart_data = pd.DataFrame({
-            "Recipe": recipe_names,
-            "Total Cost": recipe_costs,
-            "Cost per Unit": cost_per_unit
-        })
+        # Try to find this ingredient in inventory for cost
+        new_ingredient_cost = 0.0
+        matched_ingredient = None
         
-        # Display bar chart
-        st.subheader("Recipe Cost Comparison")
-        
-        # Use Plotly for better interactivity
-        import plotly.express as px
-        
-        fig = px.bar(
-            chart_data,
-            x="Recipe",
-            y="Total Cost",
-            hover_data=["Cost per Unit"],
-            color="Total Cost",
-            labels={"Total Cost": "Total Recipe Cost ($)"},
-            height=400
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Cost breakdown for a selected recipe
-        st.subheader("Recipe Cost Breakdown")
-        
-        selected_recipe = st.selectbox(
-            "Select a recipe to analyze:",
-            [recipe.get('name', f"Recipe {i}") for i, recipe in enumerate(st.session_state.recipes)]
-        )
-        
-        # Find the selected recipe
-        selected_recipe_data = None
-        for recipe in st.session_state.recipes:
-            if recipe.get('name') == selected_recipe:
-                selected_recipe_data = recipe
+        for item in st.session_state.inventory:
+            if item.get("name", "").lower() == new_ingredient_name.lower():
+                matched_ingredient = item
+                new_ingredient_cost = item.get("price", 0.0) * new_ingredient_amount
                 break
         
-        if selected_recipe_data:
-            # Get ingredients with costs
-            ingredients = selected_recipe_data.get('ingredients', [])
-            
-            if ingredients:
-                # Create data for pie chart
-                ingredient_names = [ing.get('name', f"Ingredient {i}") for i, ing in enumerate(ingredients)]
-                ingredient_costs = [ing.get('cost', 0) for ing in ingredients]
-                
-                # Create pie chart for cost breakdown
-                breakdown_data = pd.DataFrame({
-                    "Ingredient": ingredient_names,
-                    "Cost": ingredient_costs
-                })
-                
-                fig2 = px.pie(
-                    breakdown_data,
-                    values="Cost",
-                    names="Ingredient",
-                    title=f"Cost Breakdown for {selected_recipe}",
-                    hover_data=["Cost"],
-                    labels={"Cost": "Cost ($)"}
-                )
-                
-                st.plotly_chart(fig2, use_container_width=True)
-                
-                # Display ingredient cost table
-                st.subheader("Ingredient Costs")
-                
-                breakdown_table = pd.DataFrame({
-                    "Ingredient": ingredient_names,
-                    "Amount": [f"{ing.get('amount')} {ing.get('unit')}" for ing in ingredients],
-                    "Cost": [f"${ing.get('cost', 0):.2f}" for ing in ingredients],
-                    "% of Total": [(ing.get('cost', 0) / selected_recipe_data.get('total_cost', 1)) * 100 for ing in ingredients]
-                })
-                
-                st.dataframe(breakdown_table, hide_index=True)
-                
-                # Alert for missing cost data
-                missing_costs = any(ing.get('cost', 0) == 0 for ing in ingredients)
-                if missing_costs:
-                    st.warning("⚠️ Some ingredients are missing cost data. Add them to your inventory for accurate cost calculations.")
-            else:
-                st.info("This recipe has no ingredients to analyze.")
+        if matched_ingredient:
+            st.success(f"Found {new_ingredient_name} in inventory at ${matched_ingredient.get('price', 0.0):.2f} per {matched_ingredient.get('unit', 'unit')}")
+            st.info(f"Estimated cost: ${new_ingredient_cost:.2f}")
+        
+        add_ingredient = st.form_submit_button("Add Ingredient")
+        
+        if add_ingredient and new_ingredient_name:
+            st.session_state.new_recipe_ingredients.append({
+                "name": new_ingredient_name,
+                "amount": new_ingredient_amount,
+                "unit": new_ingredient_unit,
+                "cost": new_ingredient_cost
+            })
+            st.rerun()
+    
+    # Preparation steps
+    st.subheader("Preparation Steps")
+    
+    # Display current steps
+    for i, step in enumerate(st.session_state.new_recipe_preparation_steps):
+        st.text_area(f"Step {i+1}", step, key=f"step_{i}", disabled=True)
+    
+    # Add step form
+    with st.form("add_step_form"):
+        new_step = st.text_area("New Step")
+        add_step = st.form_submit_button("Add Step")
+        
+        if add_step and new_step:
+            st.session_state.new_recipe_preparation_steps.append(new_step)
+            st.rerun()
+    
+    # Save recipe
+    if st.button("Save Recipe"):
+        if not recipe_name:
+            st.error("Recipe name is required!")
+        elif not st.session_state.new_recipe_ingredients:
+            st.error("At least one ingredient is required!")
         else:
-            st.error("Recipe not found!")
+            # Create recipe dictionary
+            recipe = {
+                "name": recipe_name,
+                "yield_amount": yield_amount,
+                "yield_unit": yield_unit,
+                "ingredients": st.session_state.new_recipe_ingredients,
+                "preparation_steps": st.session_state.new_recipe_preparation_steps,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            # Calculate recipe cost
+            recipe_obj = Recipe.from_dict(recipe)
+            recipe_obj.calculate_cost()
+            recipe = recipe_obj.to_dict()
+            
+            # Add recipe to session state
+            st.session_state.recipes.append(recipe)
+            
+            # Save recipes
+            save_recipes()
+            
+            # Clear form
+            clear_recipe_form()
+            
+            st.success("Recipe saved successfully!")
+            st.rerun()
+    
+    if st.button("Clear Form"):
+        clear_recipe_form()
+        st.rerun()
+
+with tab3:
+    st.subheader("Import Recipes from Excel")
+    
+    # File uploader
+    uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx", "xls"])
+    
+    if uploaded_file:
+        # Preview file
+        try:
+            df = pd.read_excel(uploaded_file)
+            st.write("File Preview:")
+            st.dataframe(df.head())
+            
+            # Map columns
+            st.subheader("Map Columns")
+            st.write("Map columns from your Excel file to our recipe fields:")
+            
+            # Get available columns
+            columns = list(df.columns)
+            none_option = "None"
+            columns.insert(0, none_option)
+            
+            # Column mapping
+            name_col = st.selectbox("Recipe Name column", columns, index=next((i for i, col in enumerate(columns) if "name" in str(col).lower()), 0))
+            yield_amount_col = st.selectbox("Yield Amount column", columns, index=next((i for i, col in enumerate(columns) if "yield" in str(col).lower() or "amount" in str(col).lower()), 0))
+            yield_unit_col = st.selectbox("Yield Unit column", columns, index=next((i for i, col in enumerate(columns) if "unit" in str(col).lower() or "portion" in str(col).lower() or "serving" in str(col).lower()), 0))
+            ingredients_col = st.selectbox("Ingredients column", columns, index=next((i for i, col in enumerate(columns) if "ingredient" in str(col).lower()), 0))
+            steps_col = st.selectbox("Preparation Steps column", columns, index=next((i for i, col in enumerate(columns) if "step" in str(col).lower() or "preparation" in str(col).lower() or "instruction" in str(col).lower() or "method" in str(col).lower()), 0))
+            
+            column_mapping = {}
+            if name_col != none_option:
+                column_mapping["name"] = name_col
+            if yield_amount_col != none_option:
+                column_mapping["yield_amount"] = yield_amount_col
+            if yield_unit_col != none_option:
+                column_mapping["yield_unit"] = yield_unit_col
+            if ingredients_col != none_option:
+                column_mapping["ingredients"] = ingredients_col
+            if steps_col != none_option:
+                column_mapping["preparation_steps"] = steps_col
+            
+            # Import button
+            if st.button("Import Recipes"):
+                with st.spinner("Processing..."):
+                    # Process the file
+                    result = process_excel_upload(uploaded_file, "recipe", column_mapping)
+                    
+                    if "error" in result:
+                        st.error(f"Error processing file: {result['error']}")
+                    elif "data" in result:
+                        # Determine import mode
+                        import_mode = st.radio(
+                            "Import mode",
+                            ["Add to existing recipes", "Replace all recipes"]
+                        )
+                        
+                        if import_mode == "Add to existing recipes":
+                            st.session_state.recipes.extend(result["data"])
+                        else:
+                            st.session_state.recipes = result["data"]
+                        
+                        # Calculate recipe costs
+                        for recipe in st.session_state.recipes:
+                            recipe_obj = Recipe.from_dict(recipe)
+                            recipe_obj.calculate_cost()
+                            # Update recipe with calculated costs
+                            recipe.update(recipe_obj.to_dict())
+                        
+                        # Save recipes
+                        save_recipes()
+                        
+                        st.success(f"Successfully imported {len(result['data'])} recipes!")
+                        st.rerun()
+        except Exception as e:
+            st.error(f"Error reading file: {str(e)}")
+    else:
+        st.info("Upload an Excel file containing recipe data")
+    
+    # Link to data extraction
+    st.markdown("---")
+    st.markdown("Need more advanced data extraction? Go to the [Data Extraction](/Data_Extraction) page.")
