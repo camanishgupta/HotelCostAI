@@ -321,15 +321,19 @@ def extract_recipe_costing(file_path):
                                 ingredient_data['unit'] = 'piece'
                                 
                             # Calculate net_qty if missing but we have qty
-                            if ingredient_data['net_qty'] == 0 and ingredient_data['qty'] > 0:
-                                # Apply loss if available
+                            # Formula: net_qty = qty + (loss % * qty)
+                            if ingredient_data['qty'] > 0:
+                                # Apply loss if available - always recalculate net_qty for consistency
                                 if ingredient_data['loss'] > 0:
                                     # Loss might be a percentage or absolute value
                                     if ingredient_data['loss'] < 1:  # Likely a percentage (e.g., 0.05 for 5%)
-                                        ingredient_data['net_qty'] = ingredient_data['qty'] * (1 - ingredient_data['loss'])
-                                    else:  # Absolute value
-                                        ingredient_data['net_qty'] = ingredient_data['qty'] - ingredient_data['loss']
+                                        # Correct formula as requested: qty + (loss% * qty)
+                                        ingredient_data['net_qty'] = ingredient_data['qty'] + (ingredient_data['loss'] * ingredient_data['qty'])
+                                    else:
+                                        # If loss is absolute value, add it directly
+                                        ingredient_data['net_qty'] = ingredient_data['qty'] + ingredient_data['loss']
                                 else:
+                                    # No loss, so net quantity equals quantity
                                     ingredient_data['net_qty'] = ingredient_data['qty']
                             
                             # Calculate total_cost if missing but we have unit_cost and qty/net_qty
@@ -345,36 +349,85 @@ def extract_recipe_costing(file_path):
                         # Step 6: Find additional recipe info (sales price, portions, etc.)
                         sales_price = 0
                         portions = 1
-                        total_cost = sum(ingredient['total_cost'] for ingredient in ingredients)
                         
-                        # Look for sales price and portions in the recipe section
+                        # Calculate total cost by summing ingredients
+                        total_cost = sum(ingredient['total_cost'] for ingredient in ingredients)
+                        st.info(f"Calculated total cost from ingredients: {total_cost:.2f}")
+                        
+                        # In ABGN format, find the specific rows for portions and sales price
+                        # Look for the row with "COST/PORTION" in it, which is after the NAME row
+                        cost_portion_row_idx = None
                         for j in range(len(recipe_df)):
-                            row = recipe_df.iloc[j]
-                            row_text = " ".join(str(x).lower() for x in row if str(x).strip())
+                            row_text = " ".join(str(x).lower() for x in recipe_df.iloc[j] if str(x).strip())
+                            if "cost/portion" in row_text:
+                                cost_portion_row_idx = j
+                                break
+                        
+                        if cost_portion_row_idx is not None:
+                            # Portions are in column D of the row after COST/PORTION
+                            portion_row_idx = cost_portion_row_idx + 1
+                            if portion_row_idx < len(recipe_df) and 3 < recipe_df.shape[1]:  # Column D is index 3
+                                try:
+                                    cell_value = recipe_df.iloc[portion_row_idx, 3]
+                                    if pd.notna(cell_value) and (isinstance(cell_value, (int, float)) or 
+                                                               (isinstance(cell_value, str) and cell_value.replace('.', '', 1).isdigit())):
+                                        portions = float(cell_value)
+                                        st.info(f"Found portions: {portions} at D{portion_row_idx+1}")
+                                except Exception as e:
+                                    st.warning(f"Error parsing portions: {str(e)}")
                             
-                            # Sales price patterns
-                            if "sales price" in row_text or "selling price" in row_text:
-                                for k, cell in enumerate(row):
-                                    if isinstance(cell, (int, float)) and cell > 0:
-                                        sales_price = float(cell)
-                                        break
+                            # Sales price is typically in column G of the same row
+                            if portion_row_idx < len(recipe_df) and 6 < recipe_df.shape[1]:  # Column G is index 6
+                                try:
+                                    cell_value = recipe_df.iloc[portion_row_idx, 6]
+                                    if pd.notna(cell_value) and (isinstance(cell_value, (int, float)) or 
+                                                               (isinstance(cell_value, str) and cell_value.replace('.', '', 1).isdigit())):
+                                        sales_price = float(cell_value)
+                                        st.info(f"Found sales price: {sales_price} at G{portion_row_idx+1}")
+                                except Exception as e:
+                                    st.warning(f"Error parsing sales price: {str(e)}")
+                        
+                        # If not found through specific positions, use general pattern matching as fallback
+                        if portions == 1:
+                            for j in range(len(recipe_df)):
+                                row = recipe_df.iloc[j]
+                                row_text = " ".join(str(x).lower() for x in row if str(x).strip())
+                                
+                                # Look for Portions patterns
+                                if "portion" in row_text or "yield" in row_text or "no.portion" in row_text:
+                                    for k, cell in enumerate(row):
+                                        if isinstance(cell, (int, float)) and cell > 0:
+                                            portions = float(cell)
+                                            st.info(f"Found portions via pattern: {portions}")
+                                            break
+                        
+                        # If still no sales price found, use general pattern matching
+                        if sales_price == 0:
+                            for j in range(len(recipe_df)):
+                                row = recipe_df.iloc[j]
+                                row_text = " ".join(str(x).lower() for x in row if str(x).strip())
+                                
+                                # Sales price patterns
+                                if "sales price" in row_text or "selling price" in row_text:
+                                    for k, cell in enumerate(row):
+                                        if isinstance(cell, (int, float)) and cell > 0:
+                                            sales_price = float(cell)
+                                            st.info(f"Found sales price via pattern: {sales_price}")
+                                            break
                             
-                            # Portions patterns
-                            if "portion" in row_text or "yield" in row_text:
-                                for k, cell in enumerate(row):
-                                    if isinstance(cell, (int, float)) and cell > 0:
-                                        portions = float(cell)
-                                        break
-                            
-                            # Total cost confirmation
-                            if "total cost" in row_text and "total cost ks" not in row_text:
-                                for k, cell in enumerate(row):
-                                    if isinstance(cell, (int, float)) and cell > 0:
-                                        # Only update if significantly different (sometimes the row total is more accurate)
-                                        calculated_total = total_cost
-                                        cell_total = float(cell)
-                                        if abs(calculated_total - cell_total) / max(calculated_total, cell_total) > 0.05:
-                                            total_cost = cell_total
+                            # Look for total cost confirmation in each row
+                            for j in range(len(recipe_df)):
+                                row = recipe_df.iloc[j]
+                                row_text = " ".join(str(x).lower() for x in row if str(x).strip())
+                                
+                                if "total cost" in row_text and "total cost ks" not in row_text:
+                                    for k, cell in enumerate(row):
+                                        if isinstance(cell, (int, float)) and cell > 0:
+                                            # Only update if significantly different (sometimes the row total is more accurate)
+                                            calculated_total = total_cost
+                                            cell_total = float(cell)
+                                            if abs(calculated_total - cell_total) / max(calculated_total, cell_total) > 0.05:
+                                                total_cost = cell_total
                         
                         # Handle case where portions wasn't found
                         if portions <= 0:

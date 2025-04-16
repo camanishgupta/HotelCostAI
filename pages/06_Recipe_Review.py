@@ -11,12 +11,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.data_processing import load_data, save_data
 from models.recipe import Recipe
 
+# Constants
+RECIPES_FILE = "data/recipes.json"
+
 st.set_page_config(page_title="Recipe Review", page_icon="📋", layout="wide")
 
 st.title("Recipe Review Dashboard")
-
-# Define data file paths
-RECIPES_FILE = "data/recipes.json"
 
 # Load existing recipes
 recipes_data = load_data(RECIPES_FILE) if os.path.exists(RECIPES_FILE) else []
@@ -157,22 +157,66 @@ with col2:
     if "selected_recipe" in st.session_state and st.session_state.selected_recipe:
         recipe = st.session_state.selected_recipe
         
-        # Recipe header with key details
+        # Recipe header with key details and editable fields
         st.markdown(f"## {recipe.get('name', 'Unnamed Recipe')}")
-        st.markdown(f"**Category:** {recipe.get('category', 'Uncategorized')}")
-        st.markdown(f"**Yield:** {recipe.get('yield_amount', 1)} {recipe.get('yield_unit', 'serving')}")
         
-        # Cost information in columns
-        cost_col1, cost_col2, cost_col3 = st.columns(3)
-        
-        with cost_col1:
-            st.metric("Total Cost", f"${recipe.get('total_cost', 0):.2f}")
+        # Editable details
+        with st.form(key="recipe_details_form"):
+            col1, col2 = st.columns(2)
             
-        with cost_col2:
-            st.metric("Sales Price", f"${recipe.get('sales_price', 0):.2f}")
+            with col1:
+                # Make name editable
+                recipe_name = st.text_input("Recipe Name", value=recipe.get('name', 'Unnamed Recipe'))
+                
+                # Make category editable
+                recipe_category = st.text_input("Category", value=recipe.get('category', 'Uncategorized'))
+                
+                # Make yield amount editable
+                recipe_yield = st.number_input(
+                    "Yield Amount", 
+                    min_value=0.1, 
+                    value=float(recipe.get('yield_amount', 1)),
+                    step=0.1
+                )
             
-        with cost_col3:
-            st.metric("Cost Percentage", f"{recipe.get('cost_percentage', 0):.1f}%")
+            with col2:
+                # Make sales price editable
+                recipe_sales_price = st.number_input(
+                    "Sales Price", 
+                    min_value=0.0, 
+                    value=float(recipe.get('sales_price', 0)),
+                    step=10.0,
+                    format="%.2f"
+                )
+                
+                # Calculate total cost from ingredients
+                total_cost = sum(ingredient.get('total_cost', 0) for ingredient in recipe.get('ingredients', []))
+                
+                # Display total cost and cost percentage
+                st.metric("Total Cost", f"${total_cost:.2f}")
+                
+                cost_percentage = 0
+                if recipe_sales_price > 0:
+                    cost_percentage = (total_cost / recipe_sales_price) * 100
+                
+                st.metric("Cost Percentage", f"{cost_percentage:.1f}%")
+            
+            # Submit button for recipe details
+            if st.form_submit_button("Update Recipe Details"):
+                # Update recipe with new values
+                recipe['name'] = recipe_name
+                recipe['category'] = recipe_category
+                recipe['yield_amount'] = recipe_yield
+                recipe['sales_price'] = recipe_sales_price
+                recipe['total_cost'] = total_cost
+                recipe['cost_percentage'] = cost_percentage
+                
+                # Save updated recipe to session state
+                st.session_state.selected_recipe = recipe
+                
+                # Refresh to show updated values
+                st.success("Recipe details updated successfully!")
+                st.rerun()
         
         # Ingredients table
         st.subheader("Ingredients")
@@ -278,6 +322,118 @@ with col2:
                 
                 # Display ingredients table
                 st.dataframe(display_df, use_container_width=True, height=400)
+                
+                # Add option to edit ingredients
+                with st.expander("Edit Ingredients"):
+                    # Select which ingredient to edit
+                    ingredient_names = [ing.get('name', f"Ingredient {i+1}") for i, ing in enumerate(formatted_ingredients)]
+                    selected_ingredient_idx = st.selectbox(
+                        "Select ingredient to edit", 
+                        range(len(ingredient_names)),
+                        format_func=lambda i: ingredient_names[i]
+                    )
+                    
+                    # Create a form to edit the selected ingredient
+                    selected_ingredient = formatted_ingredients[selected_ingredient_idx]
+                    with st.form(key=f"edit_ingredient_form_{selected_ingredient_idx}"):
+                        # Basic ingredient info
+                        ing_name = st.text_input("Ingredient Name", value=selected_ingredient.get('name', ''))
+                        ing_code = st.text_input("Item Code", value=selected_ingredient.get('item_code', ''))
+                        ing_unit = st.text_input("Unit", value=selected_ingredient.get('unit', ''))
+                        
+                        # Quantities
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            # Use qty or amount based on what's available
+                            qty_field = 'qty' if 'qty' in selected_ingredient else 'amount'
+                            ing_qty = st.number_input(
+                                "Quantity", 
+                                min_value=0.0, 
+                                value=float(selected_ingredient.get(qty_field, 0)),
+                                step=0.01,
+                                format="%.3f"
+                            )
+                            
+                            ing_loss = st.number_input(
+                                "Loss %", 
+                                min_value=0.0, 
+                                max_value=1.0,
+                                value=float(selected_ingredient.get('loss', 0)),
+                                step=0.01,
+                                format="%.2f",
+                                help="Loss as a decimal: 0.05 = 5%"
+                            )
+                        
+                        with col2:
+                            # Net Qty is calculated
+                            net_qty = ing_qty + (ing_loss * ing_qty)
+                            st.text_input("Net Quantity (calculated)", value=f"{net_qty:.3f}", disabled=True)
+                            
+                            ing_unit_cost = st.number_input(
+                                "Unit Cost", 
+                                min_value=0.0, 
+                                value=float(selected_ingredient.get('unit_cost', 0)),
+                                step=10.0,
+                                format="%.2f"
+                            )
+                            
+                            # Total cost is calculated
+                            total_cost = net_qty * ing_unit_cost
+                            st.text_input("Total Cost (calculated)", value=f"{total_cost:.2f}", disabled=True)
+                        
+                        # Submit button
+                        if st.form_submit_button("Update Ingredient"):
+                            # Update the ingredient in the list
+                            selected_ingredient['name'] = ing_name
+                            selected_ingredient['item_code'] = ing_code
+                            selected_ingredient['unit'] = ing_unit
+                            selected_ingredient[qty_field] = ing_qty
+                            selected_ingredient['loss'] = ing_loss
+                            selected_ingredient['net_qty'] = net_qty
+                            selected_ingredient['unit_cost'] = ing_unit_cost
+                            selected_ingredient['total_cost'] = total_cost
+                            
+                            # Update the ingredient in the recipe
+                            recipe['ingredients'][selected_ingredient_idx] = selected_ingredient
+                            
+                            # Recalculate recipe total cost
+                            recipe['total_cost'] = sum(ing.get('total_cost', 0) for ing in recipe['ingredients'])
+                            
+                            # Recalculate cost percentage
+                            if recipe['sales_price'] > 0:
+                                recipe['cost_percentage'] = (recipe['total_cost'] / recipe['sales_price']) * 100
+                            
+                            # Update session state
+                            st.session_state.selected_recipe = recipe
+                            
+                            # Display success message
+                            st.success(f"Ingredient '{ing_name}' updated successfully!")
+                            
+                            # Reload the page to show updated values
+                            st.rerun()
+                
+                # Button to save all changes to the recipes data file
+                if st.button("Save All Changes"):
+                    # Get existing recipes
+                    recipes_data = load_data(RECIPES_FILE)
+                    
+                    # Find and update the current recipe
+                    updated = False
+                    for i, r in enumerate(recipes_data):
+                        if isinstance(r, dict) and r.get('name') == recipe.get('name'):
+                            recipes_data[i] = recipe
+                            updated = True
+                            break
+                    
+                    # If not found, append it
+                    if not updated:
+                        recipes_data.append(recipe)
+                        
+                    # Save back to file
+                    if save_data(recipes_data, RECIPES_FILE):
+                        st.success("All changes saved successfully!")
+                    else:
+                        st.error("Failed to save changes. Please try again.")
                 
                 # Summary metrics
                 total_ingredients = len(formatted_ingredients)
