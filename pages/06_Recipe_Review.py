@@ -23,6 +23,11 @@ recipes_data = load_data(RECIPES_FILE) if os.path.exists(RECIPES_FILE) else []
 
 # Make sure recipes are in the correct format (list of dictionaries)
 recipes = []
+
+# Handle the case where the data might be a dictionary with 'data' field
+if isinstance(recipes_data, dict) and 'data' in recipes_data:
+    recipes_data = recipes_data['data']
+
 for recipe in recipes_data:
     # Handle case when a recipe is a string instead of a dictionary
     if isinstance(recipe, str):
@@ -36,6 +41,9 @@ for recipe in recipes_data:
     else:
         # Already a dictionary or other object
         recipes.append(recipe)
+
+# Display the total number of recipes loaded
+st.sidebar.info(f"Total Recipes Loaded: {len(recipes)}")
 
 # Initialize session state
 if "filtered_recipes" not in st.session_state:

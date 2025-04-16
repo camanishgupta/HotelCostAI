@@ -35,10 +35,16 @@ col1, col2, col3 = st.columns(3)
 try:
     if os.path.exists('data/recipes.json'):
         with open('data/recipes.json', 'r') as f:
-            recipes = json.load(f)
+            recipes_data = json.load(f)
+            # Handle the case where recipes is a dict with 'data' field
+            if isinstance(recipes_data, dict) and 'data' in recipes_data:
+                recipes = recipes_data['data']
+            else:
+                recipes = recipes_data
     else:
         recipes = []
-except:
+except Exception as e:
+    st.error(f"Error loading recipes: {str(e)}")
     recipes = []
 
 try:
@@ -75,8 +81,9 @@ st.subheader("Recent Activity")
 # Combine recent activity from all data sources
 activity = []
 
-# Add recent recipes
-for recipe in recipes[-5:]:
+# Add recent recipes (safely handle list slicing)
+recent_recipes = recipes[-5:] if isinstance(recipes, list) else []
+for recipe in recent_recipes:
     activity.append({
         "type": "Recipe",
         "name": recipe.get("name", "Unnamed Recipe"),
@@ -84,8 +91,9 @@ for recipe in recipes[-5:]:
         "details": f"Cost: ${recipe.get('total_cost', 0):.2f}, Yield: {recipe.get('yield_amount', 0)} {recipe.get('yield_unit', 'serving')}"
     })
 
-# Add recent inventory updates
-for item in inventory[-5:]:
+# Add recent inventory updates (safely handle list slicing)
+recent_inventory = inventory[-5:] if isinstance(inventory, list) else []
+for item in recent_inventory:
     activity.append({
         "type": "Inventory",
         "name": item.get("name", "Unnamed Item"),
@@ -93,8 +101,9 @@ for item in inventory[-5:]:
         "details": f"Price: ${item.get('price', 0):.2f}, Stock: {item.get('stock_level', 0)} {item.get('unit', '')}"
     })
 
-# Add recent sales records
-for record in sales[-5:]:
+# Add recent sales records (safely handle list slicing)
+recent_sales = sales[-5:] if isinstance(sales, list) else []
+for record in recent_sales:
     activity.append({
         "type": "Sales",
         "name": record.get("item_name", "Unnamed Item"),
