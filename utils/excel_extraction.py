@@ -945,18 +945,17 @@ def extract_sales_from_excel(file_path):
         return []
 
 # Note: This function has been moved to abgn_extractor.py
-# Keeping this commented out for reference
-"""
-def extract_abgn_recipe_costing(file_path):
-    """
-    Extract recipe data specifically from ABGN A La Carte Menu Cost format Excel files
-    
-    Args:
-        file_path (str): Path to the ABGN Recipe Costing Excel file
-        
-    Returns:
-        list: Extracted recipes
-    """
+# Reference the new function in abgn_extractor.py
+# from utils.abgn_extractor import extract_recipe_costing
+#
+# Example docstring from old function:
+# Extract recipe data specifically from ABGN A La Carte Menu Cost format Excel files
+# 
+# Args:
+#     file_path (str): Path to the ABGN Recipe Costing Excel file
+#     
+# Returns:
+#     list: Extracted recipes
     try:
         st.info(f"Starting ABGN recipe extraction from {file_path}")
         
