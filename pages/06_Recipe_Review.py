@@ -139,9 +139,12 @@ with col1:
                     cost_percentage = recipe.get('cost_percentage', 0)
                     
                     # Create a clickable recipe item
+                    # Use a unique key combining category, index, and recipe ID
+                    unique_key = f"recipe_{category}_{i}_{recipe_id}"
+                    
                     recipe_button = st.button(
                         f"{recipe_name} - Cost: ${recipe_cost:.2f}, Sales: ${recipe_sales_price:.2f}, Cost %: {cost_percentage:.1f}%",
-                        key=f"recipe_{recipe_id}_{i}"
+                        key=unique_key
                     )
                     
                     if recipe_button:

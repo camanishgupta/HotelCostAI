@@ -120,8 +120,9 @@ def extract_recipe_costing(file_path):
                         # Step 1: Find the recipe name
                         recipe_name = ""
                         
-                        # Look in the first 5 rows for the recipe name
-                        for j in range(min(5, len(recipe_df))):
+                        # Look in the rows immediately after the recipe marker for the recipe name
+                        # Examining more rows (up to 10) since name can be a few rows down
+                        for j in range(min(10, len(recipe_df))):
                             row = recipe_df.iloc[j]
                             
                             # Strategy 1: Look for cells with "NAME:" or "MENU ITEM:" patterns
@@ -130,7 +131,7 @@ def extract_recipe_costing(file_path):
                                 cell_lower = cell_str.lower()
                                 
                                 # Check for explicit name patterns
-                                if ("name:" in cell_lower or "menu item:" in cell_lower) and ":" in cell_str:
+                                if ("name:" in cell_lower or "menu item:" in cell_lower or "item name:" in cell_lower) and ":" in cell_str:
                                     # Extract name after the colon
                                     parts = cell_str.split(":", 1)
                                     if len(parts) > 1 and parts[1].strip():
@@ -145,20 +146,50 @@ def extract_recipe_costing(file_path):
                             
                             if recipe_name:
                                 break
-                                
-                        # Strategy 2: Look for a prominent standalone title in first few rows
+                        
+                        # Strategy 2: Look for cells containing "Recipe Name" or similar
                         if not recipe_name:
-                            for j in range(min(5, len(recipe_df))):
+                            for j in range(min(10, len(recipe_df))):
+                                row = recipe_df.iloc[j]
+                                
+                                for k, cell in enumerate(row):
+                                    cell_str = str(cell).strip()
+                                    cell_lower = cell_str.lower()
+                                    
+                                    if ("recipe name" in cell_lower or "recipe title" in cell_lower or "dish name" in cell_lower):
+                                        # If found, check the next cell or cells in the same row for the name
+                                        for l in range(k+1, len(row)):
+                                            next_cell = str(row.iloc[l]).strip()
+                                            if len(next_cell) > 2 and not any(ignore in next_cell.lower() for ignore in ["standard", "recipe", "card"]):
+                                                recipe_name = next_cell
+                                                break
+                                        
+                                        # If not found in same row, check cell below
+                                        if not recipe_name and j+1 < len(recipe_df):
+                                            below_cell = str(recipe_df.iloc[j+1, k]).strip()
+                                            if len(below_cell) > 2 and not any(ignore in below_cell.lower() for ignore in ["standard", "recipe", "card"]):
+                                                recipe_name = below_cell
+                                        
+                                        break
+                                
+                                if recipe_name:
+                                    break
+                        
+                        # Strategy 3: Look for a prominent standalone title in first few rows
+                        if not recipe_name:
+                            for j in range(min(10, len(recipe_df))):
                                 row = recipe_df.iloc[j]
                                 
                                 for cell in row:
                                     cell_str = str(cell).strip()
                                     # Avoid common header words and ensure reasonable length
-                                    if (3 <= len(cell_str) <= 50 and cell_str.upper() not in 
-                                        ["STANDARD RECIPE", "RECIPE CARD", "COST CALCULATION", "ITEM CODE", 
-                                         "INGREDIENTS", "UNIT", "QTY"]):
+                                    if (3 <= len(cell_str) <= 50 and 
+                                        not any(ignore in cell_str.upper() for ignore in [
+                                            "STANDARD RECIPE", "RECIPE CARD", "COST CALCULATION", "ITEM CODE", 
+                                            "INGREDIENTS", "UNIT", "QTY", "FOOD COST", "AMOUNT"
+                                        ])):
                                         # Check if it looks like a title (first letter uppercase or all caps)
-                                        if cell_str[0].isupper() or cell_str.isupper():
+                                        if (cell_str[0].isupper() or cell_str.isupper()) and not cell_str.isdigit():
                                             recipe_name = cell_str
                                             break
                                 
