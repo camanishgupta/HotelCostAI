@@ -638,235 +638,287 @@ def extract_sales(file_path):
         file_path (str): Path to the ABGN Sales Excel file
         
     Returns:
-        list: Extracted sales records
+        tuple: (all_sales, sales_by_sheet, sale_month_year)
+            - all_sales: List of all extracted sales records
+            - sales_by_sheet: Dictionary mapping sheet names to their sales records
+            - sale_month_year: Tuple of (month, year) extracted from filename
     """
     try:
         st.info(f"Starting ABGN sales extraction from {file_path}")
         
-        # Try different engines to handle various Excel formats
-        df = None
+        # Try to open the Excel file to get sheet names
+        xls = None
+        engine = None
         try:
-            df = pd.read_excel(file_path, engine='openpyxl')
+            xls = pd.ExcelFile(file_path, engine='openpyxl')
             st.success("Successfully opened Excel file with openpyxl engine")
+            engine = 'openpyxl'
         except Exception as e1:
             st.warning(f"openpyxl engine failed: {str(e1)}")
             try:
-                df = pd.read_excel(file_path, engine='xlrd')
+                xls = pd.ExcelFile(file_path, engine='xlrd')
                 st.success("Successfully opened Excel file with xlrd engine")
+                engine = 'xlrd'
             except Exception as e2:
                 st.error(f"Failed to open Excel file with both engines: {str(e1)}; {str(e2)}")
-                return []
+                return [], {}, None
         
-        # Find the date information
-        sale_date = None
-        date_formats = ['%b-%Y', '%b %Y', '%B-%Y', '%B %Y', '%m-%Y', '%m/%Y']
+        if not xls:
+            st.error("Could not open Excel file")
+            return [], {}, None
+            
+        # Get sheet names 
+        sheets = xls.sheet_names
+        st.success(f"Found {len(sheets)} sheets in the sales file")
+        
+        # Dictionary to store sales by sheet
+        sales_by_sheet = {}
+        all_sales = []
         
         # Extract month and year from filename
         file_name = os.path.basename(file_path)
-        for pattern in [r'(\w+)[\'.-](\d{2,4})', r'(\d{1,2})[\/.-](\d{2,4})']: 
-            match = re.search(pattern, file_name)
-            if match:
-                date_parts = match.groups()
-                if len(date_parts) == 2:
-                    month_part = date_parts[0]
-                    year_part = date_parts[1]
-                    
-                    # Try to parse the date
-                    for fmt in ['%b-%Y', '%B-%Y']:
-                        try:
-                            test_str = f"{month_part}-{year_part}"
-                            sale_date = datetime.strptime(test_str, fmt).strftime('%Y-%m-%d')
-                            break
-                        except ValueError:
-                            pass
-                    
-                    # If still no date, try month as a number
-                    if not sale_date:
-                        try:
-                            month_num = int(month_part)
-                            if 1 <= month_num <= 12:
-                                # Ensure year has 4 digits
-                                if len(year_part) == 2:
-                                    year_part = f"20{year_part}"
-                                sale_date = f"{year_part}-{month_num:02d}-01"
-                        except ValueError:
-                            pass
-        
-        # If we couldn't extract date from filename, search in the file content
-        if not sale_date:
-            # Look for date in header cells
-            for i in range(min(10, len(df))):
-                row = df.iloc[i]
-                for cell in row:
-                    if pd.isna(cell):
-                        continue
-                        
-                    cell_text = str(cell).lower()
-                    if any(month.lower() in cell_text for month in 
-                          ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
-                           'jul', 'aug', 'sep', 'oct', 'nov', 'dec']):
-                        for fmt in date_formats:
-                            try:
-                                # Try to parse the date
-                                sale_date = datetime.strptime(str(cell), fmt).strftime('%Y-%m-%d')
-                                break
-                            except ValueError:
-                                continue
-                    
-                    if sale_date:
-                        break
-                if sale_date:
-                    break
-        
-        # If still no date found, use current date
-        if not sale_date:
-            sale_date = datetime.now().strftime('%Y-%m-%d')
-            st.warning(f"Could not extract date from file, using current date: {sale_date}")
-        else:
-            st.info(f"Using sale date: {sale_date}")
-        
-        # Find the sales data header row
-        header_row = -1
-        for i in range(min(20, len(df))):
-            row = df.iloc[i]
-            row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
-            if "item" in row_text and "qty" in row_text and any(term in row_text for term in ["sales", "revenue", "amount", "price"]):
-                header_row = i
-                st.info(f"Found header row at row {i}")
-                break
-        
-        if header_row < 0:
-            st.warning("Could not find header row in ABGN Sales file, using default positions")
-            header_row = 1  # Common position in ABGN format
-        
-        # Extract header and data
-        header = df.iloc[header_row]
-        data_df = df.iloc[header_row+1:].copy().reset_index(drop=True)
-        
-        # Define expected columns
-        EXPECTED_COLUMNS = {
-            'item_code': ['item', 'item code', 'code', 'product code'],
-            'item_name': ['name', 'description', 'item name', 'product name'],
-            'quantity': ['qty', 'quantity', 'sales qty', 'no of cups', 'count'],
-            'revenue': ['revenue', 'sales', 'amount', 'total', 'sales amount', 'ext amount'],
-            'cost': ['cost', 'food cost', 'cost amount', 'cogs']
+        sale_month_year = None
+        month_name_to_num = {
+            'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
         }
         
-        # Map columns to our schema
-        column_mapping = {}
-        for field, possible_names in EXPECTED_COLUMNS.items():
-            for col_idx, header_cell in enumerate(header):
-                header_text = str(header_cell).lower().strip()
-                if any(possible_name in header_text for possible_name in possible_names):
-                    column_mapping[field] = col_idx
-                    break
+        # Look for month name and year pattern (like Feb-2025)
+        month_pattern = re.search(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[\'\.,-]?(\d{2,4})', 
+                                 file_name, re.IGNORECASE)
         
-        # Check if we found the essential columns
-        missing_columns = [field for field in ['item_name', 'quantity', 'revenue'] if field not in column_mapping]
-        if missing_columns:
-            st.warning(f"Could not find essential columns: {', '.join(missing_columns)}")
-            # Use default positions
-            if 'item_code' not in column_mapping:
-                column_mapping['item_code'] = 0
-            if 'item_name' not in column_mapping:
-                column_mapping['item_name'] = 1
-            if 'quantity' not in column_mapping:
-                column_mapping['quantity'] = 2
-            if 'revenue' not in column_mapping:
-                column_mapping['revenue'] = 3
-            if 'cost' not in column_mapping:
-                column_mapping['cost'] = 4
-        
-        # Extract sales records
-        sales_records = []
-        current_category = "Uncategorized"
-        
-        for i in range(len(data_df)):
-            row = data_df.iloc[i]
+        if month_pattern:
+            month_name, year = month_pattern.groups()
+            month_num = month_name_to_num.get(month_name.lower()[:3], 1)
             
-            # Skip empty rows
-            if all(pd.isna(x) or str(x).strip() == '' for x in row):
-                continue
-            
-            # Check if this is a category header
-            first_cell = str(row.iloc[0]).strip() if len(row) > 0 else ""
-            if first_cell and all(pd.isna(x) or str(x).strip() == '' for x in row[1:]):
-                # This is likely a category heading
-                if "total" not in first_cell.lower():
-                    current_category = first_cell
-                continue
-            
-            # Extract sales data
-            sales_data = {
-                'date': sale_date,
-                'item_code': '',
-                'item_name': '',
-                'category': current_category,
-                'quantity': 0,
-                'revenue': 0,
-                'cost': 0
-            }
-            
-            # Get values from mapped columns
-            for field, col_idx in column_mapping.items():
-                if col_idx < len(row) and not pd.isna(row.iloc[col_idx]):
-                    cell_value = row.iloc[col_idx]
+            # Fix two-digit year
+            if len(year) == 2:
+                year = f"20{year}"
+                
+            sale_month_year = (month_num, int(year))
+            st.success(f"Detected month/year from filename: {month_name} {year} ({month_num}/{year})")
+        else:
+            # Try other patterns like 02-2025
+            num_pattern = re.search(r'(\d{1,2})[\/.-](\d{2,4})', file_name)
+            if num_pattern:
+                month_num, year = num_pattern.groups()
+                month_num = int(month_num)
+                
+                # Fix two-digit year
+                if len(year) == 2:
+                    year = f"20{year}"
                     
-                    if field in ['item_code', 'item_name', 'category']:
-                        # Text fields
-                        sales_data[field] = str(cell_value).strip()
-                    else:
-                        # Numeric fields
-                        try:
-                            if isinstance(cell_value, (int, float)):
-                                sales_data[field] = float(cell_value)
-                            else:
-                                # Try to extract numbers from text
-                                clean_value = ''.join(c for c in str(cell_value) if c.isdigit() or c == '.')
-                                if clean_value:
-                                    sales_data[field] = float(clean_value)
-                        except (ValueError, TypeError):
-                            pass
-            
-            # Skip rows without name or quantity
-            if (not sales_data['item_name'] and not sales_data['item_code']) or sales_data['quantity'] <= 0:
-                continue
-            
-            # Set default name if missing
-            if not sales_data['item_name'] and sales_data['item_code']:
-                sales_data['item_name'] = f"Item {sales_data['item_code']}"
-            
-            # Skip if it's a summary or total row
-            if any(keyword in sales_data['item_name'].lower() for keyword in ['total', 'sum', 'grand']):
+                if 1 <= month_num <= 12:
+                    sale_month_year = (month_num, int(year))
+                    st.success(f"Detected month/year from filename: {month_num}/{year}")
+        
+        # Process each sheet to extract daily sales data
+        for sheet_name in sheets:
+            # Skip sheets that are clearly not sales data
+            if sheet_name.lower() in ['summary', 'index', 'contents', 'toc', 'cover', 'info']:
                 continue
                 
-            # Calculate cost if missing but we have revenue and food cost percentage
-            if sales_data['cost'] == 0 and sales_data['revenue'] > 0:
-                # Try to find food cost percentage in the row
-                for col_idx, cell in enumerate(row):
-                    if col_idx not in column_mapping.values() and not pd.isna(cell):
-                        cell_text = str(cell).lower()
-                        if "%" in cell_text or any(term in header[col_idx].lower() if col_idx < len(header) else False 
-                                                for term in ["cost %", "percentage", "fc%"]):
-                            try:
-                                # Extract percentage value
-                                percentage = float(''.join(c for c in cell_text if c.isdigit() or c == '.'))
-                                if percentage > 0:
-                                    if percentage > 1 and percentage <= 100:  # Convert from percent to decimal
-                                        percentage /= 100
-                                    sales_data['cost'] = sales_data['revenue'] * percentage
-                                    break
-                            except (ValueError, TypeError):
-                                pass
+            st.info(f"Processing sheet: {sheet_name}")
             
-            # Add to sales records
-            sales_records.append(sales_data)
+            try:
+                # Read the sheet
+                df = pd.read_excel(file_path, sheet_name=sheet_name, engine=engine)
+                
+                # Skip empty sheets
+                if df.empty:
+                    st.warning(f"Sheet {sheet_name} is empty, skipping")
+                    continue
+                
+                # Remove fully empty rows and columns
+                df = df.dropna(how='all').dropna(axis=1, how='all')
+                
+                # Try to determine if this sheet represents a specific day
+                sheet_date = None
+                
+                # Check if sheet name is a day number (1-31)
+                day_num_match = re.match(r'^(\d{1,2})$', sheet_name.strip())
+                if day_num_match and sale_month_year:
+                    day_num = int(day_num_match.group(1))
+                    if 1 <= day_num <= 31:
+                        month_num, year = sale_month_year
+                        sheet_date = f"{year}-{month_num:02d}-{day_num:02d}"
+                        st.info(f"Sheet {sheet_name} represents day {day_num} of {month_num}/{year}")
+                
+                # Or check for date format in sheet name
+                if not sheet_date:
+                    date_match = re.search(r'(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})', sheet_name)
+                    if date_match:
+                        day, month, year = date_match.groups()
+                        # Fix two-digit year
+                        if len(year) == 2:
+                            year = f"20{year}"
+                        try:
+                            sheet_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                            st.info(f"Sheet {sheet_name} has date {sheet_date}")
+                        except:
+                            pass
+                
+                # Find the sales data header row in this sheet
+                header_row = None
+                data_start_row = None
+                
+                # Scan first 20 rows to find header
+                for i in range(min(20, len(df))):
+                    row = df.iloc[i]
+                    row_text = " ".join([str(x).lower() for x in row if pd.notna(x)])
+                    
+                    # Common patterns in ABGN sales headers
+                    if ("item" in row_text and ("qty" in row_text or "quantity" in row_text) and 
+                        any(term in row_text for term in ["sales", "revenue", "amount", "price"])):
+                        header_row = i
+                        data_start_row = i + 1
+                        st.info(f"Found header row at row {i+1}")
+                        break
+                
+                if header_row is None:
+                    st.warning(f"Could not find header row in sheet {sheet_name}, using default position")
+                    # Use a common default in ABGN files
+                    header_row = 4
+                    data_start_row = 5
+                
+                # Get the header row
+                header = df.iloc[header_row]
+                
+                # Map columns to our expected schema
+                EXPECTED_COLUMNS = {
+                    'item_code': ['item code', 'code', 'product code', 'item number', 'plu'],
+                    'item_name': ['item name', 'description', 'menu item', 'product name', 'menu', 'item desc'],
+                    'quantity': ['qty', 'quantity', 'sales qty', 'no of cups', 'count', 'pcs', 'nos', 'pax', 'unit sold'],
+                    'revenue': ['revenue', 'sales', 'amount', 'total', 'sales amount', 'ext amount', 'net sales', 'total sales'],
+                    'cost': ['cost', 'food cost', 'cost amount', 'cogs', 'fc', 'cost price', 'cost %']
+                }
+                
+                column_mapping = {}
+                for field, possible_names in EXPECTED_COLUMNS.items():
+                    for col_idx, col_name in enumerate(header):
+                        if pd.isna(col_name):
+                            continue
+                        col_text = str(col_name).lower().strip()
+                        if any(name in col_text for name in possible_names):
+                            column_mapping[field] = col_idx
+                            break
+                
+                # Check if we found the essential columns
+                missing_columns = [field for field in ['item_name', 'quantity'] if field not in column_mapping]
+                if missing_columns:
+                    st.warning(f"Sheet {sheet_name} is missing essential columns: {', '.join(missing_columns)}")
+                    continue
+                
+                # Extract sales data
+                sheet_sales = []
+                current_category = "Uncategorized"
+                
+                # Process each row of data
+                for i in range(data_start_row, len(df)):
+                    row = df.iloc[i]
+                    
+                    # Skip completely empty rows
+                    if all(pd.isna(x) or str(x).strip() == '' for x in row):
+                        continue
+                    
+                    # Check if this is a category header row
+                    first_cell = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ""
+                    if first_cell and all(pd.isna(x) or str(x).strip() == '' for x in row[1:]):
+                        # This is likely a category heading
+                        if not any(keyword in first_cell.lower() for keyword in ['total', 'sum', 'grand', 'sub']):
+                            current_category = first_cell
+                        continue
+                    
+                    # Extract sales data for this row
+                    sales_data = {
+                        'date': sheet_date if sheet_date else (f"{sale_month_year[1]}-{sale_month_year[0]:02d}-01" if sale_month_year else None),
+                        'sheet_name': sheet_name,
+                        'item_code': '',
+                        'item_name': '',
+                        'category': current_category,
+                        'quantity': 0,
+                        'revenue': 0,
+                        'cost': 0
+                    }
+                    
+                    # Get values from mapped columns
+                    for field, col_idx in column_mapping.items():
+                        if col_idx < len(row) and not pd.isna(row.iloc[col_idx]):
+                            cell_value = row.iloc[col_idx]
+                            
+                            if field in ['item_code', 'item_name', 'category']:
+                                # Text fields
+                                sales_data[field] = str(cell_value).strip()
+                            else:
+                                # Numeric fields
+                                try:
+                                    if isinstance(cell_value, (int, float)):
+                                        sales_data[field] = float(cell_value)
+                                    else:
+                                        # Try to extract numbers from text
+                                        clean_value = ''.join(c for c in str(cell_value) if c.isdigit() or c == '.' or c == '-')
+                                        if clean_value:
+                                            sales_data[field] = float(clean_value)
+                                except (ValueError, TypeError):
+                                    pass
+                    
+                    # Skip rows without item name or with zero quantity
+                    if (not sales_data['item_name'] and not sales_data['item_code']) or sales_data['quantity'] <= 0:
+                        continue
+                    
+                    # Skip rows that are likely totals or summaries
+                    if any(keyword in sales_data['item_name'].lower() for keyword in 
+                          ['total', 'sum', 'grand', 'subtotal', 'food cost', 'sales %']):
+                        continue
+                    
+                    # Set default name if missing
+                    if not sales_data['item_name'] and sales_data['item_code']:
+                        sales_data['item_name'] = f"Item {sales_data['item_code']}"
+                    
+                    # Try to extract food cost percentage if missing cost but have revenue
+                    if sales_data['cost'] == 0 and sales_data['revenue'] > 0:
+                        # Look for a percentage column
+                        for col_idx, cell in enumerate(row):
+                            if col_idx not in column_mapping.values() and not pd.isna(cell):
+                                cell_text = str(cell).lower()
+                                if "%" in cell_text:
+                                    try:
+                                        # Extract percentage value
+                                        pct_value = float(''.join(c for c in cell_text if c.isdigit() or c == '.'))
+                                        if 0 < pct_value <= 100:  # Reasonable percentage range
+                                            # Convert to decimal
+                                            sales_data['cost'] = sales_data['revenue'] * (pct_value / 100)
+                                            break
+                                    except (ValueError, TypeError):
+                                        pass
+                    
+                    # Add to sales records for this sheet
+                    sheet_sales.append(sales_data)
+                
+                st.success(f"Extracted {len(sheet_sales)} sales records from sheet {sheet_name}")
+                
+                if sheet_sales:
+                    sales_by_sheet[sheet_name] = sheet_sales
+                    all_sales.extend(sheet_sales)
+            
+            except Exception as sheet_err:
+                st.error(f"Error processing sheet {sheet_name}: {str(sheet_err)}")
+                import traceback
+                st.error(traceback.format_exc())
         
-        st.success(f"Successfully extracted {len(sales_records)} sales records")
-        return sales_records
+        # Summary
+        total_sales = len(all_sales)
+        total_sheets = len(sales_by_sheet)
+        
+        if total_sales > 0:
+            st.success(f"Successfully extracted {total_sales} total sales records from {total_sheets} sheets")
+            return all_sales, sales_by_sheet, sale_month_year
+        else:
+            st.warning("No sales data was extracted from the file")
+            return [], {}, sale_month_year
         
     except Exception as e:
         st.error(f"Error extracting ABGN sales data: {str(e)}")
         import traceback
         st.error(traceback.format_exc())
-        return []
+        return [], {}, None

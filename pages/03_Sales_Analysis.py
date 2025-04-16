@@ -252,10 +252,99 @@ with tab2:
     uploaded_file = st.file_uploader("Upload sales data", type=['xlsx'])
     
     if uploaded_file:
-        # Preview the data
-        df = pd.read_excel(uploaded_file)
-        st.write("Preview of uploaded data:")
-        st.dataframe(df.head())
+        # Show processing options
+        processing_method = st.radio(
+            "Processing Method",
+            ["ABGN Format (Auto-Detect)", "Standard Format (Manual Mapping)"],
+            index=0,
+            help="ABGN Format will attempt to automatically process daily sales from each sheet. Standard Format requires manual column mapping."
+        )
+        
+        if processing_method == "ABGN Format (Auto-Detect)":
+            # Process as ABGN format
+            if st.button("Process ABGN Sales File"):
+                with st.spinner("Processing ABGN sales file..."):
+                    # Save to a temporary file for processing
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                        tmp_file.write(uploaded_file.getvalue())
+                        temp_path = tmp_file.name
+                    
+                    try:
+                        # Process the file using specialized ABGN extractor
+                        from utils.abgn_extractor import extract_sales
+                        
+                        # Extract sales data with our enhanced sheet-by-sheet processor
+                        all_sales, sales_by_sheet, sale_month_year = extract_sales(temp_path)
+                        
+                        if all_sales:
+                            # Show summary of results
+                            st.success(f"Successfully extracted {len(all_sales)} sales records from {len(sales_by_sheet)} sheets")
+                            
+                            if sale_month_year:
+                                month_names = {
+                                    1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+                                    7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"
+                                }
+                                month_num, year = sale_month_year
+                                month_name = month_names.get(month_num, f"Month {month_num}")
+                                st.info(f"Sales period detected: {month_name} {year}")
+                            
+                            # Show preview of sheets with record counts
+                            st.subheader("Sales by Sheet")
+                            sheet_summary = []
+                            for sheet_name, records in sales_by_sheet.items():
+                                sheet_summary.append({
+                                    "Sheet": sheet_name,
+                                    "Records": len(records),
+                                    "Revenue": sum(r.get('revenue', 0) for r in records),
+                                    "Items Sold": sum(r.get('quantity', 0) for r in records)
+                                })
+                            
+                            if sheet_summary:
+                                st.dataframe(pd.DataFrame(sheet_summary))
+                            
+                            # Show sample of extracted records
+                            st.subheader("Sample Records")
+                            preview_df = pd.DataFrame(all_sales[:10] if len(all_sales) > 10 else all_sales)
+                            st.dataframe(preview_df)
+                            
+                            # Confirm import options
+                            import_option = st.radio(
+                                "Import option:",
+                                ["Add to existing sales data", "Replace all sales data"]
+                            )
+                            
+                            if st.button("Confirm Import"):
+                                if import_option == "Add to existing sales data":
+                                    st.session_state.sales.extend(all_sales)
+                                    st.success(f"Added {len(all_sales)} new sales records.")
+                                else:  # "Replace all sales data"
+                                    st.session_state.sales = all_sales
+                                    st.success(f"Replaced sales data with {len(all_sales)} records.")
+                                
+                                # Save the updated sales data
+                                save_sales()
+                                st.rerun()
+                        else:
+                            st.error("No sales data could be extracted from the file. Try Standard Format method.")
+                    
+                    except Exception as e:
+                        st.error(f"Error processing ABGN file: {str(e)}")
+                        import traceback
+                        st.error(traceback.format_exc())
+                    
+                    finally:
+                        # Clean up temp file
+                        try:
+                            os.remove(temp_path)
+                        except:
+                            pass
+        else:
+            # Preview the data for standard processing
+            df = pd.read_excel(uploaded_file)
+            st.write("Preview of uploaded data:")
+            st.dataframe(df.head())
         
         # Column mapping
         st.subheader("Map Columns")
