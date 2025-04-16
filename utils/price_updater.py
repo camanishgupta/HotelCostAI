@@ -179,9 +179,39 @@ def match_inventory_items(receipt_items, inventory_items, threshold=0.7):
     """
     matches = {}
     
+    # Convert any string items to dictionaries
+    processed_receipt_items = []
+    for item in receipt_items:
+        if isinstance(item, dict):
+            processed_receipt_items.append(item)
+        elif isinstance(item, str):
+            try:
+                # Try to parse as JSON if it's a string
+                import json
+                item_dict = json.loads(item)
+                processed_receipt_items.append(item_dict)
+            except:
+                # If can't parse, create a simple dict with only name
+                processed_receipt_items.append({'name': item})
+    
+    # Same with inventory items
+    processed_inventory_items = []
+    for item in inventory_items:
+        if isinstance(item, dict):
+            processed_inventory_items.append(item)
+        elif isinstance(item, str):
+            try:
+                # Try to parse as JSON if it's a string
+                import json
+                item_dict = json.loads(item)
+                processed_inventory_items.append(item_dict)
+            except:
+                # If can't parse, create a simple dict with only name
+                processed_inventory_items.append({'name': item})
+    
     # Create normalized name lookup for inventory
     inventory_lookup = {}
-    for item in inventory_items:
+    for item in processed_inventory_items:
         item_code = item.get('item_code', '')
         name = item.get('name', '')
         if name:
@@ -193,7 +223,7 @@ def match_inventory_items(receipt_items, inventory_items, threshold=0.7):
             }
     
     # Try direct item code matching first
-    for receipt_item in receipt_items:
+    for receipt_item in processed_receipt_items:
         receipt_code = receipt_item.get('item_code', '')
         receipt_name = receipt_item.get('name', '')
         
@@ -256,9 +286,24 @@ def update_recipe_costs(recipes, inventory_items, receipt_items, match_threshold
     # Match receipt items to inventory items
     item_matches = match_inventory_items(receipt_items, inventory_items, threshold=match_threshold)
     
+    # Convert receipt items to processed form
+    processed_receipt_items = []
+    for item in receipt_items:
+        if isinstance(item, dict):
+            processed_receipt_items.append(item)
+        elif isinstance(item, str):
+            try:
+                # Try to parse as JSON if it's a string
+                import json
+                item_dict = json.loads(item)
+                processed_receipt_items.append(item_dict)
+            except:
+                # If can't parse, create a simple dict with only name
+                processed_receipt_items.append({'name': item})
+                
     # Build lookup of receipt prices by matched inventory item code
     price_lookup = {}
-    for receipt_item in receipt_items:
+    for receipt_item in processed_receipt_items:
         receipt_code = receipt_item.get('item_code', '')
         
         # Skip if no code or no match found
@@ -278,8 +323,23 @@ def update_recipe_costs(recipes, inventory_items, receipt_items, match_threshold
                 'unit': unit
             }
     
+    # Convert inventory items to processed form if not already processed
+    processed_inventory_items = []
+    for item in inventory_items:
+        if isinstance(item, dict):
+            processed_inventory_items.append(item)
+        elif isinstance(item, str):
+            try:
+                # Try to parse as JSON if it's a string
+                import json
+                item_dict = json.loads(item)
+                processed_inventory_items.append(item_dict)
+            except:
+                # If can't parse, create a simple dict with only name
+                processed_inventory_items.append({'name': item})
+    
     # Get ingredient details from inventory lookup
-    inventory_lookup = {item.get('item_code', ''): item for item in inventory_items}
+    inventory_lookup = {item.get('item_code', ''): item for item in processed_inventory_items}
     
     # Update recipe costs
     updated_recipes = []
