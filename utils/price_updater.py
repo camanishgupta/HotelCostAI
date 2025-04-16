@@ -228,7 +228,7 @@ def match_inventory_items(receipt_items, inventory_items, threshold=0.7):
     
     return matches
 
-def update_recipe_costs(recipes, inventory_items, receipt_items):
+def update_recipe_costs(recipes, inventory_items, receipt_items, match_threshold=0.7):
     """
     Update recipe costs based on receipt data and inventory items
     
@@ -236,6 +236,7 @@ def update_recipe_costs(recipes, inventory_items, receipt_items):
         recipes (list): List of recipe dictionaries
         inventory_items (list): List of inventory item dictionaries
         receipt_items (list): List of receipt item dictionaries
+        match_threshold (float, optional): Threshold for fuzzy matching of ingredient names (0.0-1.0)
         
     Returns:
         tuple: (updated_recipes, update_summary)
@@ -253,7 +254,7 @@ def update_recipe_costs(recipes, inventory_items, receipt_items):
     }
     
     # Match receipt items to inventory items
-    item_matches = match_inventory_items(receipt_items, inventory_items)
+    item_matches = match_inventory_items(receipt_items, inventory_items, threshold=match_threshold)
     
     # Build lookup of receipt prices by matched inventory item code
     price_lookup = {}
