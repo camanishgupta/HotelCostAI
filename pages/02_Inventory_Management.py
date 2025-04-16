@@ -95,16 +95,49 @@ with tab1:
         # Convert to DataFrame for display
         inventory_df = pd.DataFrame(filtered_inventory)
         
-        # Select columns to display
-        display_columns = ['item_code', 'name', 'category', 'price', 'unit', 'stock_level', 'supplier', 'updated_at']
-        display_df = inventory_df[display_columns].copy()
+        # Select columns to display - only use columns that exist in the DataFrame
+        all_display_columns = ['item_code', 'name', 'category', 'price', 'unit', 'stock_level', 'supplier', 'updated_at']
+        available_columns = [col for col in all_display_columns if col in inventory_df.columns]
+        display_df = inventory_df[available_columns].copy()
         
-        # Format columns
-        display_df['price'] = display_df['price'].apply(lambda x: f"${x:.2f}")
-        display_df['updated_at'] = pd.to_datetime(display_df['updated_at']).dt.strftime('%Y-%m-%d')
+        # Add missing columns with default values
+        for col in all_display_columns:
+            if col not in available_columns:
+                if col in ['price', 'stock_level']:
+                    display_df[col] = 0.0
+                else:
+                    display_df[col] = ""
         
-        # Rename columns for display
-        display_df.columns = ['Item Code', 'Name', 'Category', 'Price', 'Unit', 'Stock Level', 'Supplier', 'Last Updated']
+        # Format columns safely - handle missing values
+        if 'price' in display_df.columns:
+            display_df['price'] = display_df['price'].apply(lambda x: f"${float(x):.2f}" if pd.notna(x) else "$0.00")
+        
+        if 'updated_at' in display_df.columns:
+            try:
+                display_df['updated_at'] = pd.to_datetime(display_df['updated_at'], errors='coerce').dt.strftime('%Y-%m-%d')
+                # Replace NaT values
+                display_df['updated_at'] = display_df['updated_at'].fillna("")
+            except:
+                display_df['updated_at'] = ""
+        
+        # Create mapping from original column names to display names
+        column_name_map = {
+            'item_code': 'Item Code',
+            'name': 'Name',
+            'category': 'Category',
+            'price': 'Price',
+            'unit': 'Unit',
+            'stock_level': 'Stock Level',
+            'supplier': 'Supplier',
+            'updated_at': 'Last Updated'
+        }
+        
+        # Rename columns using the mapping
+        display_columns = []
+        for col in display_df.columns:
+            display_columns.append(column_name_map.get(col, col))
+        
+        display_df.columns = display_columns
         
         # Add edit buttons
         st.dataframe(

@@ -134,10 +134,12 @@ with tab1:
                         st.rerun()
                     
                     # Scale recipe
+                    # Convert yield to float to ensure consistent types
+                    current_yield = float(recipe.get("yield_amount", 1.0))
                     new_yield = st.number_input(
                         "Scale recipe to yield:",
-                        min_value=1,
-                        value=recipe.get("yield_amount", 1),
+                        min_value=1.0,
+                        value=current_yield,
                         key=f"scale_{i}"
                     )
                     
