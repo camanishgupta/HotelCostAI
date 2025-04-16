@@ -955,54 +955,103 @@ def extract_abgn_recipe_costing(file_path):
         list: Extracted recipes
     """
     try:
-        # Try to open the Excel file
+        st.info(f"Starting ABGN recipe extraction from {file_path}")
+        
+        # Define the expected ABGN column names for ingredients
+        ABGN_COLUMNS = {
+            'item_code': ['item code', 'item', 'code', 'item.code'],
+            'name': ['ingredients', 'ingredient', 'description', 'item name'],
+            'unit': ['unit', 'uom', 'unit of measure', 'measure'],
+            'qty': ['qty', 'quantity', 'req.qty', 'required qty'],
+            'loss': ['loss', 'waste', 'loss %', 'loss qty'],
+            'net_qty': ['net qty', 'net quantity', 'net.qty', 'net'],
+            'unit_cost': ['at amount', 'rate', 'price', 'unit price', 'amount', 'unit cost'],
+            'total_cost': ['total amount ks', 'total', 'total amount', 'total cost', 'ext.amount']
+        }
+        
+        # Try different engines to handle various Excel formats
+        xls = None
         try:
-            xl = pd.ExcelFile(file_path)
-        except Exception as e:
-            st.error(f"Failed to open Excel file: {str(e)}")
+            xls = pd.ExcelFile(file_path, engine='openpyxl')
+            st.success("Successfully opened Excel file with openpyxl engine")
+        except Exception as e1:
+            st.warning(f"openpyxl engine failed: {str(e1)}")
+            try:
+                xls = pd.ExcelFile(file_path, engine='xlrd')
+                st.success("Successfully opened Excel file with xlrd engine")
+            except Exception as e2:
+                st.error(f"Failed to open Excel file with both engines: {str(e1)}; {str(e2)}")
+                return []
+        
+        # Get all sheet names
+        sheet_names = xls.sheet_names
+        
+        if not sheet_names:
+            st.warning("No sheets found in file")
             return []
             
-        # Get sheet names (excluding Summary and Sheet1)
-        sheet_names = [name for name in xl.sheet_names if name != 'Summary' and name != 'Sheet1']
+        st.info(f"Found {len(sheet_names)} sheets: {', '.join(sheet_names)}")
         
-        # Process each sheet
         all_recipes = []
         
-        for sheet_name in sheet_names:
-            st.info(f"Processing sheet: {sheet_name}")
-            
+        # Process each sheet
+        for sheet_idx, sheet_name in enumerate(sheet_names):
             try:
-                # Read the sheet
+                st.info(f"Processing sheet {sheet_idx+1}/{len(sheet_names)}: {sheet_name}")
+                
+                # Load sheet
                 df = pd.read_excel(file_path, sheet_name=sheet_name)
                 
-                # Track recipe boundaries
-                recipe_starts = []
-                
-                # Find all recipe start positions
-                for i in range(len(df)):
-                    row = df.iloc[i]
-                    row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
-                    
-                    # Recipe usually starts with "STANDARD COST RECIPE CARD" or "NAME :"
-                    if "standard cost recipe card" in row_text or (("name" in row_text) and (":" in row_text)):
-                        recipe_starts.append(i)
-                
-                if not recipe_starts:
-                    st.warning(f"No recipes found in sheet {sheet_name}")
+                # Skip empty sheets
+                if df.empty:
+                    st.warning(f"Sheet {sheet_name} is empty")
                     continue
-                    
-                # Add an ending boundary
-                recipe_starts.append(len(df))
                 
-                # Process each recipe
-                for i in range(len(recipe_starts) - 1):
-                    start = recipe_starts[i]
-                    end = recipe_starts[i+1]
+                # Fix any completely blank rows (replace NaN with empty string)
+                df = df.fillna('')
+                
+                # Find all potential recipe sections
+                # ABGN recipe format typically has headers with "STANDARD RECIPE" or similar text
+                recipe_markers = []
+                
+                for i in range(len(df)):
+                    row_values = [str(x).lower() for x in df.iloc[i] if str(x).strip()]
+                    row_text = " ".join(row_values)
                     
-                    # Extract the recipe section
-                    recipe_df = df.iloc[start:end].copy()
-                    
-                    # Find the recipe name
+                    # Look for typical recipe header patterns
+                    if any(marker in row_text for marker in [
+                        "standard recipe", "recipe card", "recipe cost", "menu item",
+                        "cost calculation", "food cost"
+                    ]):
+                        recipe_markers.append(i)
+                
+                # If no markers found, try to find ingredient table headers
+                if not recipe_markers:
+                    for i in range(len(df)):
+                        row_values = [str(x).lower() for x in df.iloc[i] if str(x).strip()]
+                        row_text = " ".join(row_values)
+                        
+                        if "item code" in row_text and "ingredients" in row_text and ("unit" in row_text or "qty" in row_text):
+                            # Found an ingredient table header - go back a few rows to find recipe start
+                            start_idx = max(0, i-5)
+                            recipe_markers.append(start_idx)
+                
+                if not recipe_markers:
+                    st.warning(f"No recipe markers found in sheet {sheet_name}")
+                    continue
+                
+                st.success(f"Found {len(recipe_markers)} potential recipes in sheet {sheet_name}")
+                
+                # Process each recipe section
+                for i, start_idx in enumerate(recipe_markers):
+                    try:
+                        # Determine the end of this recipe (next recipe start or end of sheet)
+                        end_idx = recipe_markers[i+1] if i < len(recipe_markers)-1 else len(df)
+                        
+                        # Extract just this recipe's rows
+                        recipe_df = df.iloc[start_idx:end_idx].copy().reset_index(drop=True)
+                        
+                        # Find the recipe name
                     recipe_name = ""
                     name_found = False
                     
