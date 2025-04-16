@@ -944,6 +944,296 @@ def extract_sales_from_excel(file_path):
         st.error(f"Error extracting sales: {str(e)}")
         return []
 
+def extract_abgn_recipe_costing(file_path):
+    """
+    Extract recipe data specifically from ABGN A La Carte Menu Cost format Excel files
+    
+    Args:
+        file_path (str): Path to the ABGN Recipe Costing Excel file
+        
+    Returns:
+        list: Extracted recipes
+    """
+    try:
+        # Try to open the Excel file
+        try:
+            xl = pd.ExcelFile(file_path)
+        except Exception as e:
+            st.error(f"Failed to open Excel file: {str(e)}")
+            return []
+            
+        # Get sheet names (excluding Summary and Sheet1)
+        sheet_names = [name for name in xl.sheet_names if name != 'Summary' and name != 'Sheet1']
+        
+        # Process each sheet
+        all_recipes = []
+        
+        for sheet_name in sheet_names:
+            st.info(f"Processing sheet: {sheet_name}")
+            
+            try:
+                # Read the sheet
+                df = pd.read_excel(file_path, sheet_name=sheet_name)
+                
+                # Track recipe boundaries
+                recipe_starts = []
+                
+                # Find all recipe start positions
+                for i in range(len(df)):
+                    row = df.iloc[i]
+                    row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+                    
+                    # Recipe usually starts with "STANDARD COST RECIPE CARD" or "NAME :"
+                    if "standard cost recipe card" in row_text or (("name" in row_text) and (":" in row_text)):
+                        recipe_starts.append(i)
+                
+                if not recipe_starts:
+                    st.warning(f"No recipes found in sheet {sheet_name}")
+                    continue
+                    
+                # Add an ending boundary
+                recipe_starts.append(len(df))
+                
+                # Process each recipe
+                for i in range(len(recipe_starts) - 1):
+                    start = recipe_starts[i]
+                    end = recipe_starts[i+1]
+                    
+                    # Extract the recipe section
+                    recipe_df = df.iloc[start:end].copy()
+                    
+                    # Find the recipe name
+                    recipe_name = ""
+                    for j in range(min(5, len(recipe_df))):
+                        row = recipe_df.iloc[j]
+                        for cell in row.values:
+                            if pd.notna(cell) and "NAME" in str(cell).upper() and ":" in str(cell):
+                                # The name might be in the same cell or in the next cell
+                                cell_text = str(cell)
+                                if ":" in cell_text:
+                                    name_parts = cell_text.split(":")
+                                    if len(name_parts) > 1 and pd.notna(name_parts[1]) and len(name_parts[1].strip()) > 0:
+                                        recipe_name = name_parts[1].strip()
+                                    else:
+                                        # Check if the name is in the next cell
+                                        name_idx = list(row.index).index(row[row == cell].index[0])
+                                        if name_idx + 1 < len(row) and pd.notna(row.iloc[name_idx + 1]):
+                                            recipe_name = str(row.iloc[name_idx + 1]).strip()
+                                break
+                        if recipe_name:
+                            break
+                    
+                    # If still no name found, try alternative approach
+                    if not recipe_name:
+                        for j in range(min(5, len(recipe_df))):
+                            row = recipe_df.iloc[j]
+                            for col_idx, cell in enumerate(row.values):
+                                if pd.notna(cell) and "NAME" in str(cell).upper():
+                                    # The name might be in the next cell
+                                    if col_idx + 1 < len(row) and pd.notna(row.iloc[col_idx + 1]):
+                                        recipe_name = str(row.iloc[col_idx + 1]).strip()
+                                        break
+                            if recipe_name:
+                                break
+                    
+                    # If still no name found, use a default name with index
+                    if not recipe_name:
+                        recipe_name = f"{sheet_name} Recipe {i+1}"
+                        
+                    st.write(f"Found recipe: {recipe_name}")
+                    
+                    # Find the ingredients table
+                    ingredients_start = -1
+                    for j in range(len(recipe_df)):
+                        row = recipe_df.iloc[j]
+                        row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+                        if "item code" in row_text and "ingredients" in row_text and "unit" in row_text and "qty" in row_text:
+                            ingredients_start = j
+                            break
+                    
+                    if ingredients_start < 0:
+                        st.warning(f"Could not find ingredients table for recipe {recipe_name}")
+                        continue
+                        
+                    # Find the end of ingredients (usually when Total Cost appears)
+                    ingredients_end = len(recipe_df)
+                    for j in range(ingredients_start + 1, len(recipe_df)):
+                        row = recipe_df.iloc[j]
+                        row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+                        if "total cost" in row_text and len(row_text) < 30:  # Short row with total cost is the summary
+                            ingredients_end = j
+                            break
+                    
+                    # Extract ingredients
+                    ingredients_df = recipe_df.iloc[ingredients_start+1:ingredients_end].copy()
+                    
+                    # Find column positions from the header row
+                    header_row = recipe_df.iloc[ingredients_start]
+                    item_code_col = None
+                    ingredient_name_col = None
+                    unit_col = None
+                    qty_col = None
+                    unit_price_col = None
+                    total_amount_col = None
+                    
+                    for col_idx, cell in enumerate(header_row.values):
+                        if pd.isna(cell):
+                            continue
+                        
+                        cell_text = str(cell).lower()
+                        if "item code" in cell_text:
+                            item_code_col = col_idx
+                        elif "ingredients" in cell_text:
+                            ingredient_name_col = col_idx
+                        elif "unit" in cell_text:
+                            unit_col = col_idx
+                        elif "qty" in cell_text:
+                            qty_col = col_idx
+                        elif "at amount" in cell_text:
+                            unit_price_col = col_idx
+                        elif "total amount" in cell_text and "ks" in cell_text:
+                            total_amount_col = col_idx
+                    
+                    # If columns not found, use default positions
+                    if item_code_col is None:
+                        item_code_col = 0
+                    if ingredient_name_col is None:
+                        ingredient_name_col = 1
+                    if unit_col is None:
+                        unit_col = 2
+                    if qty_col is None:
+                        qty_col = 3
+                    if unit_price_col is None:
+                        unit_price_col = 6
+                    if total_amount_col is None:
+                        total_amount_col = 7
+                        
+                    # Extract the ingredients
+                    ingredients = []
+                    
+                    for j in range(len(ingredients_df)):
+                        row = ingredients_df.iloc[j]
+                        
+                        # Skip rows with NaN in name column
+                        if ingredient_name_col >= len(row) or pd.isna(row.iloc[ingredient_name_col]):
+                            continue
+                            
+                        # Get ingredient name
+                        ingredient_name = str(row.iloc[ingredient_name_col]).strip()
+                        
+                        # Skip if empty name
+                        if not ingredient_name:
+                            continue
+                            
+                        # Get item code if available
+                        item_code = ""
+                        if item_code_col < len(row) and pd.notna(row.iloc[item_code_col]):
+                            item_code = str(row.iloc[item_code_col]).strip()
+                            
+                        # Get unit
+                        unit = ""
+                        if unit_col < len(row) and pd.notna(row.iloc[unit_col]):
+                            unit = str(row.iloc[unit_col]).strip()
+                            
+                        # Get quantity
+                        quantity = 0
+                        if qty_col < len(row) and pd.notna(row.iloc[qty_col]):
+                            try:
+                                quantity = float(row.iloc[qty_col])
+                            except:
+                                pass
+                        
+                        # Get unit price
+                        unit_price = 0
+                        if unit_price_col < len(row) and pd.notna(row.iloc[unit_price_col]):
+                            try:
+                                unit_price = float(row.iloc[unit_price_col])
+                            except:
+                                pass
+                                
+                        # Get total amount
+                        total_amount = 0
+                        if total_amount_col < len(row) and pd.notna(row.iloc[total_amount_col]):
+                            try:
+                                total_amount = float(row.iloc[total_amount_col])
+                            except:
+                                pass
+                                
+                        # Add ingredient
+                        ingredients.append({
+                            "name": ingredient_name,
+                            "item_code": item_code,
+                            "unit": unit,
+                            "amount": quantity,
+                            "unit_cost": unit_price,
+                            "total_cost": total_amount
+                        })
+                    
+                    # Find sales price
+                    sales_price = 0
+                    for j in range(len(recipe_df)):
+                        row = recipe_df.iloc[j]
+                        row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+                        if "actual sales price" in row_text or "sales price" in row_text:
+                            # Find the sales price value (usually in the same row, a few columns over)
+                            for k in range(len(row)):
+                                cell = row.iloc[k]
+                                if pd.notna(cell) and isinstance(cell, (int, float)) and cell > 0:
+                                    sales_price = float(cell)
+                                    break
+                            break
+                    
+                    # Find total cost and portions
+                    total_cost = 0
+                    portions = 1
+                    
+                    for j in range(len(recipe_df)):
+                        row = recipe_df.iloc[j]
+                        row_text = " ".join([str(x).lower() for x in row.values if pd.notna(x)])
+                        
+                        if "total cost" in row_text and "portion" not in row_text:
+                            # Find the total cost value
+                            for k in range(len(row)):
+                                cell = row.iloc[k]
+                                if pd.notna(cell) and isinstance(cell, (int, float)) and cell > 0:
+                                    total_cost = float(cell)
+                                    break
+                        
+                        elif "no.portion" in row_text or "number of portion" in row_text:
+                            # Find the portions value
+                            for k in range(len(row)):
+                                cell = row.iloc[k]
+                                if pd.notna(cell) and isinstance(cell, (int, float)) and cell > 0:
+                                    portions = float(cell)
+                                    break
+                    
+                    # Create the recipe
+                    recipe = {
+                        "name": recipe_name,
+                        "category": sheet_name,
+                        "yield_amount": portions,
+                        "yield_unit": "serving",
+                        "ingredients": ingredients,
+                        "total_cost": total_cost,
+                        "sales_price": sales_price,
+                        "cost_percentage": (total_cost / sales_price * 100) if sales_price > 0 else 0,
+                        "imported_at": datetime.now().isoformat()
+                    }
+                    
+                    all_recipes.append(recipe)
+                
+            except Exception as sheet_err:
+                st.error(f"Error processing sheet {sheet_name}: {str(sheet_err)}")
+                continue
+        
+        st.success(f"Successfully extracted {len(all_recipes)} recipes from {len(sheet_names)} sheets")
+        return all_recipes
+        
+    except Exception as e:
+        st.error(f"Error extracting ABGN recipe costing data: {str(e)}")
+        return []
+
+
 def extract_abgn_inventory(file_path):
     """
     Extract inventory data specifically from ABGN One Line Store format Excel files
@@ -1470,7 +1760,22 @@ def batch_process_directory(directory):
                 # First check if this is an ABGN file by name
                 if 'abgn' in file_name.lower():
                     # Handle special case for ABGN files
-                    if 'sale' in file_name.lower() or 'sales' in file_name.lower():
+                    if 'menu cost' in file_name.lower() or 'recipe cost' in file_name.lower() or 'a la carte' in file_name.lower():
+                        st.info("Detected ABGN Recipe Costing file, attempting specialized recipe extraction...")
+                        recipes = extract_abgn_recipe_costing(file_path)
+                        if recipes:
+                            st.success(f"Found {len(recipes)} recipes in {file_name} using specialized ABGN recipe costing extractor")
+                            results['recipes'].extend(recipes)
+                            continue
+                        else:
+                            st.warning(f"Failed to extract recipes from ABGN Recipe Costing file {file_name} using specialized extractor, trying generic extraction...")
+                            recipes = extract_recipes_from_excel(file_path)
+                            if recipes:
+                                st.success(f"Found {len(recipes)} recipes in {file_name} using generic extraction")
+                                results['recipes'].extend(recipes)
+                                continue
+                    
+                    elif 'sale' in file_name.lower() or 'sales' in file_name.lower():
                         st.info("Detected ABGN Sales file, attempting specialized ABGN sales extraction...")
                         sales = extract_abgn_sales(file_path)
                         if sales:
