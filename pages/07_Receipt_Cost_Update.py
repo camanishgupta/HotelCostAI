@@ -77,17 +77,33 @@ with tab1:
             
             # Add a selection for sheet if needed
             try:
-                # Get preview for auto-detection
-                preview_info = preview_receipt_columns(temp_path)
+                # Display a spinner while processing the file
+                with st.spinner("Analyzing ABGN receipt file format..."):
+                    # This might take a moment for large files
+                    preview_info = preview_receipt_columns(temp_path)
                 
                 if "error" in preview_info:
                     st.error(f"Error previewing file: {preview_info['error']}")
+                    
+                    # Provide more detailed error guidance
+                    st.error("""
+                    The file could not be analyzed properly. This could be due to:
+                    1. File format issues
+                    2. Unexpected column structures
+                    3. Protected or corrupted Excel file
+                    
+                    Please check if this is a valid ABGN receipt file with price data.
+                    """)
                 else:
+                    # Show file details
+                    st.success(f"Successfully analyzed receipt file")
+                    
                     # Display available sheets if more than one
                     available_sheets = preview_info.get("available_sheets", [])
                     selected_sheet = None
                     
                     if len(available_sheets) > 1:
+                        st.info(f"Found {len(available_sheets)} sheets in this file")
                         selected_sheet = st.selectbox(
                             "Select Sheet to Process",
                             ["Process All Sheets"] + available_sheets
@@ -297,14 +313,32 @@ with tab2:
     if not st.session_state.inventory:
         st.info("No inventory items found. Add items in the Inventory Management page.")
     else:
-        # Get unique categories for filtering
-        categories = sorted(list(set(item.get('category', '') for item in st.session_state.inventory)))
+        # Make sure inventory is a list of dictionaries not strings
+        inventory_data = []
+        for item in st.session_state.inventory:
+            if isinstance(item, dict):
+                inventory_data.append(item)
+            elif isinstance(item, str):
+                # Try to handle case where data might be serialized improperly
+                try:
+                    import json
+                    item_dict = json.loads(item)
+                    inventory_data.append(item_dict)
+                except:
+                    # If can't parse as JSON, skip this item
+                    continue
+        
+        # Get unique categories for filtering from valid inventory data
+        categories = []
+        if inventory_data:
+            categories = sorted(list(set(item.get('category', '') for item in inventory_data if isinstance(item, dict))))
+        
         selected_category = st.selectbox("Filter by Category", ["All Categories"] + categories)
         
         # Filter inventory based on selected category
-        filtered_inventory = st.session_state.inventory
+        filtered_inventory = inventory_data
         if selected_category != "All Categories":
-            filtered_inventory = [item for item in st.session_state.inventory if item.get('category', '') == selected_category]
+            filtered_inventory = [item for item in inventory_data if item.get('category', '') == selected_category]
         
         # Search filter
         search_query = st.text_input("Search Items", "")

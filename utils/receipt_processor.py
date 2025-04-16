@@ -36,8 +36,12 @@ def detect_receipt_columns(df):
     # Convert column names to lowercase for easier matching
     cols_lower = [str(col).lower() for col in df.columns]
     
-    # Item Code patterns
-    code_patterns = ['item code', 'code', 'sku', 'product code', 'product id', 'part', 'part no']
+    # Item Code patterns for ABGN format and general formats
+    code_patterns = [
+        'item code', 'code', 'sku', 'product code', 'product id', 'part', 'part no',
+        'item number', 'item#', 'art#', 'article', 'art. no.', 'catalog#', 'item no',
+        'abgn code', 'id', 'ref', 'reference', 'material code', 'material number'
+    ]
     for pattern in code_patterns:
         for i, col in enumerate(cols_lower):
             if pattern in col:
@@ -46,8 +50,12 @@ def detect_receipt_columns(df):
         if mappings['item_code']:
             break
     
-    # Item Name/Description patterns
-    name_patterns = ['item name', 'description', 'desc', 'product name', 'product desc', 'particular']
+    # Item Name/Description patterns for ABGN format and general formats
+    name_patterns = [
+        'item name', 'description', 'desc', 'product name', 'product desc', 'particular',
+        'item description', 'name', 'goods', 'article', 'material', 'particular', 'item',
+        'material description', 'product', 'commodity', 'menu item', 'food item'
+    ]
     for pattern in name_patterns:
         for i, col in enumerate(cols_lower):
             if pattern in col:
@@ -56,8 +64,12 @@ def detect_receipt_columns(df):
         if mappings['name']:
             break
     
-    # Unit patterns
-    unit_patterns = ['unit', 'uom', 'measure', 'u/m']
+    # Unit patterns for ABGN format and general formats
+    unit_patterns = [
+        'unit', 'uom', 'measure', 'u/m', 'units', 'unit of measure',
+        'pack', 'packaging', 'pack size', 'pkg', 'size', 'unit size',
+        'basis', 'base unit', 'pur. unit', 'packing', 'standard unit'
+    ]
     for pattern in unit_patterns:
         for i, col in enumerate(cols_lower):
             if pattern in col and not 'price' in col and not 'rate' in col and not 'cost' in col:
@@ -66,8 +78,13 @@ def detect_receipt_columns(df):
         if mappings['unit']:
             break
     
-    # Unit Price patterns
-    price_patterns = ['rate', 'unit price', 'price', 'unit rate', 'unit cost', 'at amount']
+    # Unit Price patterns for ABGN format and general formats
+    price_patterns = [
+        'rate', 'unit price', 'price', 'unit rate', 'unit cost', 'at amount',
+        'price/unit', 'amount', 'cost', 'rate/amt', 'rate/unit', 'unit value', 
+        'basic rate', 'net rate', 'net price', 'standard price', 'unit rate',
+        'effective price', 'per unit', 'nett amount'
+    ]
     for pattern in price_patterns:
         for i, col in enumerate(cols_lower):
             if pattern in col:
@@ -76,8 +93,14 @@ def detect_receipt_columns(df):
         if mappings['unit_price']:
             break
     
-    # Quantity patterns
-    qty_patterns = ['qty', 'quantity', 'pcs', 'nos']
+    # Quantity patterns for ABGN format and general formats
+    qty_patterns = [
+        'qty', 'quantity', 'pcs', 'nos', 'pieces', 'count', 'no. of', 
+        'number of', 'amt', 'ord qty', 'ordered qty', 'received qty',
+        'gr qty', 'deliv qty', 'issue qty', 'receipt qty', 'stock qty',
+        'actual qty', 'inventory qty', 'purchased qty', 'delivered qty',
+        'received amount', 'batch qty', 'billed qty', 'net qty'
+    ]
     for pattern in qty_patterns:
         for i, col in enumerate(cols_lower):
             if pattern in col and not 'unit' in col:
@@ -86,8 +109,13 @@ def detect_receipt_columns(df):
         if mappings['quantity']:
             break
     
-    # Total Amount patterns
-    amount_patterns = ['total amount', 'amount', 'total', 'line total', 'ext amt', 'extension']
+    # Total Amount patterns for ABGN format and general formats
+    amount_patterns = [
+        'total amount', 'amount', 'total', 'line total', 'ext amt', 'extension',
+        'total price', 'line amount', 'net amount', 'final amount', 'value',
+        'total value', 'extended price', 'net value', 'extended amount',
+        'sub-total', 'gross amount', 'gross total', 'grand total', 'amt total'
+    ]
     for pattern in amount_patterns:
         for i, col in enumerate(cols_lower):
             if pattern in col:
@@ -96,8 +124,14 @@ def detect_receipt_columns(df):
         if mappings['total_amount']:
             break
     
-    # Date patterns
-    date_patterns = ['date', 'receipt date', 'gr date', 'transaction date']
+    # Date patterns for ABGN format and general formats
+    date_patterns = [
+        'date', 'receipt date', 'gr date', 'transaction date', 'posting date',
+        'doc date', 'document date', 'entry date', 'order date', 'created date',
+        'invoice date', 'receiving date', 'purchase date', 'issue date', 'received date',
+        'delivery date', 'scheduled date', 'arrival date', 'po date', 'bill date',
+        'receiving date', 'process date', 'voucher date', 'accounting date'
+    ]
     for pattern in date_patterns:
         for i, col in enumerate(cols_lower):
             if pattern in col:
