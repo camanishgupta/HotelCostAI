@@ -5,9 +5,11 @@ import os
 import json
 import io
 import tempfile
+import time
 from datetime import datetime
 from utils.data_processing import load_data, save_data
 from utils.price_updater import process_receipt_data, update_recipe_costs, display_price_update_summary
+from utils.receipt_processor import process_abgn_receipt, process_generic_receipt, preview_receipt_columns
 
 # Set page configuration
 st.set_page_config(
@@ -57,96 +59,235 @@ with tab1:
     uploaded_file = st.file_uploader("Upload Receipt Excel File", type=['xlsx', 'xls'])
     
     if uploaded_file:
-        # Preview the data
-        df = pd.read_excel(uploaded_file)
-        st.write("Preview of uploaded data:")
-        st.dataframe(df.head())
+        # Selecting a processing method
+        process_method = st.radio(
+            "Receipt Processing Method",
+            ["Automatic ABGN Receipt Detection", "Manual Column Selection"],
+            index=0,
+            help="Automatic detection will attempt to identify columns in ABGN receipt format. Manual selection allows you to specify columns."
+        )
         
-        # Column mapping
-        st.subheader("Map Receipt Columns")
-        
-        # Detect possible columns
-        possible_code_cols = [col for col in df.columns if 'code' in str(col).lower() or 'item' in str(col).lower() or 'id' in str(col).lower()]
-        possible_name_cols = [col for col in df.columns if 'name' in str(col).lower() or 'desc' in str(col).lower() or 'item' in str(col).lower()]
-        possible_unit_cols = [col for col in df.columns if 'unit' in str(col).lower() or 'uom' in str(col).lower() or 'measure' in str(col).lower()]
-        possible_price_cols = [col for col in df.columns if 'price' in str(col).lower() or 'cost' in str(col).lower() or 'rate' in str(col).lower() or 'amount' in str(col).lower()]
-        
-        # Default indices for selectboxes
-        code_idx = next((df.columns.get_loc(col) for col in possible_code_cols if col in df.columns), 0) if possible_code_cols else 0
-        name_idx = next((df.columns.get_loc(col) for col in possible_name_cols if col in df.columns), 0) if possible_name_cols else 0
-        unit_idx = next((df.columns.get_loc(col) for col in possible_unit_cols if col in df.columns), 0) if possible_unit_cols else 0
-        price_idx = next((df.columns.get_loc(col) for col in possible_price_cols if col in df.columns), 0) if possible_price_cols else 0
-        
-        # Column selection
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            item_code_col = st.selectbox("Item Code Column", ["None"] + list(df.columns), index=code_idx+1 if code_idx >= 0 else 0)
-            name_col = st.selectbox("Item Name Column", ["None"] + list(df.columns), index=name_idx+1 if name_idx >= 0 else 0)
-        
-        with col2:
-            unit_col = st.selectbox("Unit Column", ["None"] + list(df.columns), index=unit_idx+1 if unit_idx >= 0 else 0)
-            unit_price_col = st.selectbox("Unit Price Column", ["None"] + list(df.columns), index=price_idx+1 if price_idx >= 0 else 0)
-        
-        # Convert "None" to None
-        item_code_col = None if item_code_col == "None" else item_code_col
-        name_col = None if name_col == "None" else name_col
-        unit_col = None if unit_col == "None" else unit_col
-        unit_price_col = None if unit_price_col == "None" else unit_price_col
-        
-        # Match threshold configuration
-        st.subheader("Matching Configuration")
-        match_threshold = st.slider("Matching Threshold", min_value=0.1, max_value=1.0, value=0.7, step=0.05,
-                                  help="Minimum similarity score (0-1) required to match receipt items to inventory items")
-        
-        # Update button
-        if st.button("Update Recipe Costs"):
-            if not st.session_state.recipes or not st.session_state.inventory:
-                st.error("You need both recipes and inventory data to update costs.")
-            elif not name_col and not item_code_col:
-                st.error("You must select at least an item code or name column.")
-            elif not unit_price_col:
-                st.error("You must select a unit price column.")
-            else:
-                with st.spinner("Updating recipe costs..."):
-                    # Process receipt data
-                    receipt_items = process_receipt_data(df, item_code_col, name_col, unit_col, unit_price_col)
+        # Save uploaded file to temp file for processing
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            tmp_file.write(uploaded_file.getvalue())
+            temp_path = tmp_file.name
+            
+        if process_method == "Automatic ABGN Receipt Detection":
+            st.write("Using specialized ABGN receipt processor...")
+            
+            # Add a selection for sheet if needed
+            try:
+                # Get preview for auto-detection
+                preview_info = preview_receipt_columns(temp_path)
+                
+                if "error" in preview_info:
+                    st.error(f"Error previewing file: {preview_info['error']}")
+                else:
+                    # Display available sheets if more than one
+                    available_sheets = preview_info.get("available_sheets", [])
+                    selected_sheet = None
                     
-                    if not receipt_items:
-                        st.error("Could not extract any valid receipt items from the uploaded file.")
-                    else:
-                        # Update recipe costs
-                        updated_recipes, update_summary = update_recipe_costs(
-                            st.session_state.recipes, 
-                            st.session_state.inventory,
-                            receipt_items
+                    if len(available_sheets) > 1:
+                        selected_sheet = st.selectbox(
+                            "Select Sheet to Process",
+                            ["Process All Sheets"] + available_sheets
                         )
                         
-                        # Store update results in session state
-                        st.session_state.update_results = update_summary
-                        
-                        # Update recipes in session state
-                        st.session_state.recipes = updated_recipes
-                        
-                        # Save recipes to file
-                        save_recipes()
-                        
-                        # Display update summary
-                        display_price_update_summary(update_summary)
-                        
-                        # Add update to history
-                        if 'update_history' not in st.session_state:
-                            st.session_state.update_history = []
-                        
-                        st.session_state.update_history.append({
-                            'date': datetime.now().isoformat(),
-                            'file_name': uploaded_file.name,
-                            'recipes_updated': update_summary.get('recipes_updated', 0),
-                            'ingredients_updated': update_summary.get('ingredients_updated', 0),
-                            'overall_change_percent': update_summary.get('overall_change_percent', 0)
-                        })
-                        
-                        st.success("Recipe costs updated successfully!")
+                        if selected_sheet == "Process All Sheets":
+                            selected_sheet = None
+                    
+                    # Show detected mappings
+                    st.subheader("Detected Column Mappings")
+                    col_mappings = preview_info.get("column_mappings", {})
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write("Item Code: ", col_mappings.get("item_code", "Not detected"))
+                        st.write("Name: ", col_mappings.get("name", "Not detected"))
+                        st.write("Unit: ", col_mappings.get("unit", "Not detected"))
+                    
+                    with col2:
+                        st.write("Unit Price: ", col_mappings.get("unit_price", "Not detected"))
+                        st.write("Quantity: ", col_mappings.get("quantity", "Not detected"))
+                        st.write("Date: ", col_mappings.get("date", "Not detected"))
+                    
+                    # Show sample data
+                    st.subheader("Sample Data")
+                    sample_data = preview_info.get("sample_data", [])
+                    if sample_data:
+                        st.dataframe(pd.DataFrame(sample_data))
+                    
+                    # Match threshold configuration
+                    st.subheader("Matching Configuration")
+                    match_threshold = st.slider(
+                        "Matching Threshold", 
+                        min_value=0.1, 
+                        max_value=1.0, 
+                        value=0.7, 
+                        step=0.05,
+                        help="Minimum similarity score (0-1) required to match receipt items to inventory items"
+                    )
+                    
+                    # Process button
+                    if st.button("Process Receipt and Update Costs"):
+                        if not st.session_state.recipes or not st.session_state.inventory:
+                            st.error("You need both recipes and inventory data to update costs.")
+                        else:
+                            with st.spinner("Processing receipt data..."):
+                                # Process the receipt file
+                                receipt_items = process_abgn_receipt(temp_path, selected_sheet)
+                                
+                                if not receipt_items:
+                                    st.error("Could not extract any valid receipt items from the file.")
+                                else:
+                                    st.success(f"Successfully extracted {len(receipt_items)} items from the receipt.")
+                                    
+                                    # Display extracted items
+                                    receipt_df = pd.DataFrame(receipt_items).fillna('')
+                                    st.dataframe(receipt_df)
+                                    
+                                    # Update recipe costs
+                                    with st.spinner("Updating recipe costs..."):
+                                        updated_recipes, update_summary = update_recipe_costs(
+                                            st.session_state.recipes, 
+                                            st.session_state.inventory,
+                                            receipt_items,
+                                            match_threshold=match_threshold
+                                        )
+                                        
+                                        # Store update results
+                                        st.session_state.update_results = update_summary
+                                        
+                                        # Update recipes in session state
+                                        st.session_state.recipes = updated_recipes
+                                        
+                                        # Save recipes to file
+                                        save_recipes()
+                                        
+                                        # Display update summary
+                                        display_price_update_summary(update_summary)
+                                        
+                                        # Add update to history
+                                        if 'update_history' not in st.session_state:
+                                            st.session_state.update_history = []
+                                        
+                                        st.session_state.update_history.append({
+                                            'date': datetime.now().isoformat(),
+                                            'file_name': uploaded_file.name,
+                                            'recipes_updated': update_summary.get('recipes_updated', 0),
+                                            'ingredients_updated': update_summary.get('ingredients_updated', 0),
+                                            'overall_change_percent': update_summary.get('overall_change_percent', 0)
+                                        })
+                                        
+                                        st.success("Recipe costs updated successfully!")
+            except Exception as e:
+                st.error(f"Error processing receipt file: {str(e)}")
+                import traceback
+                st.error(traceback.format_exc())
+        
+        else:  # Manual Column Selection
+            # Read the Excel file
+            try:
+                df = pd.read_excel(temp_path)
+                st.write("Preview of uploaded data:")
+                st.dataframe(df.head())
+                
+                # Column mapping
+                st.subheader("Map Receipt Columns")
+                
+                # Detect possible columns
+                possible_code_cols = [col for col in df.columns if 'code' in str(col).lower() or 'item' in str(col).lower() or 'id' in str(col).lower()]
+                possible_name_cols = [col for col in df.columns if 'name' in str(col).lower() or 'desc' in str(col).lower() or 'item' in str(col).lower()]
+                possible_unit_cols = [col for col in df.columns if 'unit' in str(col).lower() or 'uom' in str(col).lower() or 'measure' in str(col).lower()]
+                possible_price_cols = [col for col in df.columns if 'price' in str(col).lower() or 'cost' in str(col).lower() or 'rate' in str(col).lower() or 'amount' in str(col).lower()]
+                
+                # Default indices for selectboxes
+                code_idx = next((df.columns.get_loc(col) for col in possible_code_cols if col in df.columns), 0) if possible_code_cols else 0
+                name_idx = next((df.columns.get_loc(col) for col in possible_name_cols if col in df.columns), 0) if possible_name_cols else 0
+                unit_idx = next((df.columns.get_loc(col) for col in possible_unit_cols if col in df.columns), 0) if possible_unit_cols else 0
+                price_idx = next((df.columns.get_loc(col) for col in possible_price_cols if col in df.columns), 0) if possible_price_cols else 0
+                
+                # Column selection
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    item_code_col = st.selectbox("Item Code Column", ["None"] + list(df.columns), index=code_idx+1 if code_idx >= 0 else 0)
+                    name_col = st.selectbox("Item Name Column", ["None"] + list(df.columns), index=name_idx+1 if name_idx >= 0 else 0)
+                
+                with col2:
+                    unit_col = st.selectbox("Unit Column", ["None"] + list(df.columns), index=unit_idx+1 if unit_idx >= 0 else 0)
+                    unit_price_col = st.selectbox("Unit Price Column", ["None"] + list(df.columns), index=price_idx+1 if price_idx >= 0 else 0)
+                
+                # Convert "None" to None
+                item_code_col = None if item_code_col == "None" else item_code_col
+                name_col = None if name_col == "None" else name_col
+                unit_col = None if unit_col == "None" else unit_col
+                unit_price_col = None if unit_price_col == "None" else unit_price_col
+                
+                # Match threshold configuration
+                st.subheader("Matching Configuration")
+                match_threshold = st.slider(
+                    "Matching Threshold", 
+                    min_value=0.1, 
+                    max_value=1.0, 
+                    value=0.7, 
+                    step=0.05,
+                    help="Minimum similarity score (0-1) required to match receipt items to inventory items"
+                )
+                
+                # Update button
+                if st.button("Update Recipe Costs"):
+                    if not st.session_state.recipes or not st.session_state.inventory:
+                        st.error("You need both recipes and inventory data to update costs.")
+                    elif not name_col and not item_code_col:
+                        st.error("You must select at least an item code or name column.")
+                    elif not unit_price_col:
+                        st.error("You must select a unit price column.")
+                    else:
+                        with st.spinner("Updating recipe costs..."):
+                            # Process receipt data
+                            receipt_items = process_receipt_data(df, item_code_col, name_col, unit_col, unit_price_col)
+                            
+                            if not receipt_items:
+                                st.error("Could not extract any valid receipt items from the uploaded file.")
+                            else:
+                                # Update recipe costs
+                                updated_recipes, update_summary = update_recipe_costs(
+                                    st.session_state.recipes, 
+                                    st.session_state.inventory,
+                                    receipt_items,
+                                    match_threshold=match_threshold
+                                )
+                                
+                                # Store update results in session state
+                                st.session_state.update_results = update_summary
+                                
+                                # Update recipes in session state
+                                st.session_state.recipes = updated_recipes
+                                
+                                # Save recipes to file
+                                save_recipes()
+                                
+                                # Display update summary
+                                display_price_update_summary(update_summary)
+                                
+                                # Add update to history
+                                if 'update_history' not in st.session_state:
+                                    st.session_state.update_history = []
+                                
+                                st.session_state.update_history.append({
+                                    'date': datetime.now().isoformat(),
+                                    'file_name': uploaded_file.name,
+                                    'recipes_updated': update_summary.get('recipes_updated', 0),
+                                    'ingredients_updated': update_summary.get('ingredients_updated', 0),
+                                    'overall_change_percent': update_summary.get('overall_change_percent', 0)
+                                })
+                                
+                                st.success("Recipe costs updated successfully!")
+            except Exception as e:
+                st.error(f"Error reading Excel file: {str(e)}")
+                import traceback
+                st.error(traceback.format_exc())
 
 with tab2:
     st.subheader("Manual Price Update")
