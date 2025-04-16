@@ -21,13 +21,49 @@ st.set_page_config(
 # Initialize session state variables if they don't exist
 if 'recipes' not in st.session_state:
     if os.path.exists('data/recipes.json'):
-        st.session_state.recipes = load_data('data/recipes.json')
+        # Load recipes and ensure they're properly parsed
+        recipes_data = load_data('data/recipes.json')
+        
+        # Process recipe data to ensure proper format
+        processed_recipes = []
+        if isinstance(recipes_data, list):
+            for recipe in recipes_data:
+                if isinstance(recipe, dict):
+                    processed_recipes.append(recipe)
+                elif isinstance(recipe, str):
+                    try:
+                        # Try to parse as JSON if it's a string
+                        recipe_dict = json.loads(recipe)
+                        processed_recipes.append(recipe_dict)
+                    except:
+                        # Skip invalid recipes
+                        continue
+        
+        st.session_state.recipes = processed_recipes if processed_recipes else []
     else:
         st.session_state.recipes = []
 
 if 'inventory' not in st.session_state:
     if os.path.exists('data/inventory.json'):
-        st.session_state.inventory = load_data('data/inventory.json')
+        # Load inventory and ensure it's properly parsed
+        inventory_data = load_data('data/inventory.json')
+        
+        # Process inventory data to ensure proper format
+        processed_inventory = []
+        if isinstance(inventory_data, list):
+            for item in inventory_data:
+                if isinstance(item, dict):
+                    processed_inventory.append(item)
+                elif isinstance(item, str):
+                    try:
+                        # Try to parse as JSON if it's a string
+                        item_dict = json.loads(item)
+                        processed_inventory.append(item_dict)
+                    except:
+                        # Skip invalid items
+                        continue
+        
+        st.session_state.inventory = processed_inventory if processed_inventory else []
     else:
         st.session_state.inventory = []
 
