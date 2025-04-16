@@ -1004,39 +1004,75 @@ def extract_abgn_recipe_costing(file_path):
                     
                     # Find the recipe name
                     recipe_name = ""
-                    for j in range(min(5, len(recipe_df))):
+                    name_found = False
+                    
+                    # First, look for the standard name pattern in the first few rows
+                    for j in range(min(10, len(recipe_df))):
                         row = recipe_df.iloc[j]
-                        for cell in row.values:
-                            if pd.notna(cell) and "NAME" in str(cell).upper() and ":" in str(cell):
-                                # The name might be in the same cell or in the next cell
-                                cell_text = str(cell)
+                        
+                        for col_idx, cell in enumerate(row.values):
+                            if pd.isna(cell):
+                                continue
+                                
+                            cell_text = str(cell).upper()
+                            
+                            # Look for typical menu item name patterns
+                            if "NAME" in cell_text and ":" in cell_text:
+                                # Parse name from this cell (after the colon)
+                                name_parts = str(cell).split(":", 1)
+                                if len(name_parts) > 1 and name_parts[1].strip():
+                                    recipe_name = name_parts[1].strip()
+                                    name_found = True
+                                    break
+                                # If name isn't in this cell, check next cell
+                                elif col_idx + 1 < len(row) and pd.notna(row.iloc[col_idx + 1]):
+                                    potential_name = str(row.iloc[col_idx + 1]).strip()
+                                    # Only use if it looks like a name (not just a number or code)
+                                    if len(potential_name) > 2 and not potential_name.replace('.', '', 1).isdigit():
+                                        recipe_name = potential_name
+                                        name_found = True
+                                        break
+                            
+                            # Also check for "MENU ITEM:" pattern
+                            elif "MENU" in cell_text and "ITEM" in cell_text:
+                                # Check if name is in this cell
                                 if ":" in cell_text:
-                                    name_parts = cell_text.split(":")
-                                    if len(name_parts) > 1 and pd.notna(name_parts[1]) and len(name_parts[1].strip()) > 0:
+                                    name_parts = str(cell).split(":", 1)
+                                    if len(name_parts) > 1:
                                         recipe_name = name_parts[1].strip()
-                                    else:
-                                        # Check if the name is in the next cell
-                                        name_idx = list(row.index).index(row[row == cell].index[0])
-                                        if name_idx + 1 < len(row) and pd.notna(row.iloc[name_idx + 1]):
-                                            recipe_name = str(row.iloc[name_idx + 1]).strip()
-                                break
-                        if recipe_name:
+                                        name_found = True
+                                        break
+                                # Check next cell for the name
+                                elif col_idx + 1 < len(row) and pd.notna(row.iloc[col_idx + 1]):
+                                    recipe_name = str(row.iloc[col_idx + 1]).strip()
+                                    name_found = True
+                                    break
+                        
+                        if name_found:
                             break
                     
-                    # If still no name found, try alternative approach
-                    if not recipe_name:
-                        for j in range(min(5, len(recipe_df))):
+                    # If still no name found, try looking for a header or title cell
+                    if not name_found:
+                        # ABGN format often has a larger title cell at the top
+                        for j in range(min(7, len(recipe_df))):
                             row = recipe_df.iloc[j]
-                            for col_idx, cell in enumerate(row.values):
-                                if pd.notna(cell) and "NAME" in str(cell).upper():
-                                    # The name might be in the next cell
-                                    if col_idx + 1 < len(row) and pd.notna(row.iloc[col_idx + 1]):
-                                        recipe_name = str(row.iloc[col_idx + 1]).strip()
+                            for cell in row.values:
+                                if pd.isna(cell):
+                                    continue
+                                    
+                                cell_text = str(cell).strip()
+                                # Look for a capitalized name that isn't too long and doesn't contain special keywords
+                                if (cell_text.isupper() or cell_text[0].isupper()) and 3 <= len(cell_text) <= 40:
+                                    # Skip cells with administrative keywords
+                                    skip_keywords = ["STANDARD", "COST", "RECIPE", "CARD", "CALCULATION"]
+                                    if not any(keyword in cell_text.upper() for keyword in skip_keywords):
+                                        recipe_name = cell_text
+                                        name_found = True
                                         break
-                            if recipe_name:
+                            if name_found:
                                 break
                     
-                    # If still no name found, use a default name with index
+                    # If still no name found, use a default name with index and sheet
                     if not recipe_name:
                         recipe_name = f"{sheet_name} Recipe {i+1}"
                         
@@ -1159,7 +1195,77 @@ def extract_abgn_recipe_costing(file_path):
                             except:
                                 pass
                                 
-                        # Add ingredient
+                        # Skip if ingredient name contains numeric values at the beginning (likely a combined field)
+                        combined_field = False
+                        if ingredient_name and any(c.isdigit() for c in ingredient_name[:5]):
+                            st.write(f"Found combined field: {ingredient_name}")
+                            combined_field = True
+                            
+                            # Try to parse the combined field
+                            parts = ingredient_name.split()
+                            if len(parts) >= 4:
+                                # Format usually: "CODE NAME AMOUNT UNIT PRICE"
+                                parsed_name = []
+                                parsed_item_code = ""
+                                parsed_unit = ""
+                                parsed_quantity = 0
+                                parsed_unit_price = 0
+                                
+                                # First part is usually item code
+                                if parts[0].replace('-', '').replace('_', '').isalnum():
+                                    parsed_item_code = parts[0]
+                                    parts = parts[1:]
+                                
+                                # Last part might be price
+                                try:
+                                    if parts[-1].replace('.', '', 1).isdigit():
+                                        parsed_unit_price = float(parts[-1])
+                                        parts = parts[:-1]
+                                except:
+                                    pass
+                                
+                                # Second-to-last might be unit
+                                if len(parts) >= 2 and len(parts[-1]) <= 6:
+                                    parsed_unit = parts[-1]
+                                    parts = parts[:-1]
+                                
+                                # Third-to-last might be quantity
+                                if len(parts) >= 2:
+                                    try:
+                                        if parts[-1].replace('.', '', 1).isdigit():
+                                            parsed_quantity = float(parts[-1])
+                                            parts = parts[:-1]
+                                    except:
+                                        pass
+                                
+                                # What's left is the name
+                                parsed_name = " ".join(parts)
+                                
+                                # Use parsed values if better than originals
+                                if parsed_name:
+                                    ingredient_name = parsed_name
+                                if parsed_item_code and not item_code:
+                                    item_code = parsed_item_code
+                                if parsed_unit and not unit:
+                                    unit = parsed_unit
+                                if parsed_quantity > 0 and quantity == 0:
+                                    quantity = parsed_quantity
+                                if parsed_unit_price > 0 and unit_price == 0:
+                                    unit_price = parsed_unit_price
+                        
+                        # Calculate total cost if missing but we have unit price and quantity
+                        if total_amount == 0 and unit_price > 0 and quantity > 0:
+                            total_amount = unit_price * quantity
+                            
+                        # Apply default unit if missing
+                        if not unit:
+                            unit = "piece"
+                            
+                        # Log for debugging
+                        if combined_field:
+                            st.write(f"Parsed: Name: {ingredient_name}, Code: {item_code}, Unit: {unit}, Qty: {quantity}, Price: {unit_price}, Total: {total_amount}")
+                        
+                        # Add ingredient with properly parsed fields
                         ingredients.append({
                             "name": ingredient_name,
                             "item_code": item_code,
