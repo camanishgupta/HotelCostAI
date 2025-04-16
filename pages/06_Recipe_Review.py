@@ -201,16 +201,77 @@ with col2:
                     if col not in ingredients_df.columns:
                         ingredients_df[col] = ''
                 
-                # Format columns for display
+                # Format columns for display - include all ABGN columns
                 display_df = ingredients_df.copy()
-                display_df = display_df[['name', 'amount', 'unit', 'unit_cost', 'total_cost']]
-                display_df.columns = ['Ingredient', 'Amount', 'Unit', 'Unit Cost', 'Total Cost']
                 
-                # Format numeric columns
-                for col in ['Unit Cost', 'Total Cost']:
+                # Check for each possible column and include it if it exists
+                columns_to_display = []
+                column_mapping = {}
+                
+                if 'item_code' in display_df.columns:
+                    columns_to_display.append('item_code')
+                    column_mapping['item_code'] = 'Item Code'
+                
+                columns_to_display.append('name')
+                column_mapping['name'] = 'Ingredient'
+                
+                if 'unit' in display_df.columns:
+                    columns_to_display.append('unit')
+                    column_mapping['unit'] = 'Unit'
+                
+                # Handle different naming conventions for quantity
+                if 'qty' in display_df.columns:
+                    columns_to_display.append('qty')
+                    column_mapping['qty'] = 'QTY'
+                elif 'amount' in display_df.columns:
+                    columns_to_display.append('amount')
+                    column_mapping['amount'] = 'QTY'
+                
+                # Add loss column if present
+                if 'loss' in display_df.columns:
+                    columns_to_display.append('loss')
+                    column_mapping['loss'] = 'Loss'
+                
+                # Add net_qty column if present
+                if 'net_qty' in display_df.columns:
+                    columns_to_display.append('net_qty')
+                    column_mapping['net_qty'] = 'Net Qty'
+                
+                # Add pricing columns
+                if 'unit_cost' in display_df.columns:
+                    columns_to_display.append('unit_cost')
+                    column_mapping['unit_cost'] = 'AT AMOUNT'
+                
+                if 'total_cost' in display_df.columns:
+                    columns_to_display.append('total_cost')
+                    column_mapping['total_cost'] = 'TOTAL AMOUNT KS'
+                
+                # Ensure we have at least basic columns if none of the standard ones are found
+                if not columns_to_display:
+                    columns_to_display = list(display_df.columns)
+                    column_mapping = {col: col.capitalize() for col in columns_to_display}
+                
+                # Select only columns that actually exist in the DataFrame
+                available_columns = [col for col in columns_to_display if col in display_df.columns]
+                display_df = display_df[available_columns]
+                
+                # Rename columns to match ABGN format
+                new_column_names = [column_mapping.get(col, col.capitalize()) for col in available_columns]
+                display_df.columns = new_column_names
+                
+                # Format numeric columns - match both original and ABGN column names
+                price_columns = ['Unit Cost', 'Total Cost', 'AT AMOUNT', 'TOTAL AMOUNT KS']
+                for col in price_columns:
                     if col in display_df.columns:
                         display_df[col] = display_df[col].apply(
-                            lambda x: f"${float(x):.2f}" if pd.notnull(x) and x != '' and str(x).replace('.', '', 1).isdigit() else '')
+                            lambda x: f"{float(x):,.2f}" if pd.notnull(x) and x != '' and str(x).replace('.', '', 1).isdigit() else '')
+                            
+                # Format quantity columns
+                qty_columns = ['QTY', 'Amount', 'Loss', 'Net Qty']
+                for col in qty_columns:
+                    if col in display_df.columns:
+                        display_df[col] = display_df[col].apply(
+                            lambda x: f"{float(x):.3f}" if pd.notnull(x) and x != '' and str(x).replace('.', '', 1).isdigit() else '')
                 
                 # Display ingredients table
                 st.dataframe(display_df, use_container_width=True, height=400)

@@ -1195,7 +1195,7 @@ def extract_abgn_recipe_costing(file_path):
                             except:
                                 pass
                                 
-                        # Skip if ingredient name contains numeric values at the beginning (likely a combined field)
+                        # Check for combined fields and attempt to parse them
                         combined_field = False
                         if ingredient_name and any(c.isdigit() for c in ingredient_name[:5]):
                             st.write(f"Found combined field: {ingredient_name}")
@@ -1261,16 +1261,45 @@ def extract_abgn_recipe_costing(file_path):
                         if not unit:
                             unit = "piece"
                             
+                        # Look for loss and net quantity values in the row
+                        loss_qty = 0
+                        net_qty = quantity  # Default to quantity if not specified
+                        
+                        # Try to find loss and net qty columns 
+                        for i, col_val in enumerate(row):
+                            if pd.isna(col_val):
+                                continue
+                                
+                            col_header = ""
+                            if i < len(header_row):
+                                col_header = str(header_row.iloc[i]).lower() if pd.notna(header_row.iloc[i]) else ""
+                                
+                            # Check for loss column
+                            if "loss" in col_header and not pd.isna(col_val):
+                                try:
+                                    loss_qty = float(col_val)
+                                except:
+                                    pass
+                                    
+                            # Check for net qty column
+                            if "net" in col_header and "qty" in col_header and not pd.isna(col_val):
+                                try:
+                                    net_qty = float(col_val)
+                                except:
+                                    pass
+                            
                         # Log for debugging
                         if combined_field:
-                            st.write(f"Parsed: Name: {ingredient_name}, Code: {item_code}, Unit: {unit}, Qty: {quantity}, Price: {unit_price}, Total: {total_amount}")
+                            st.write(f"Parsed: Name: {ingredient_name}, Code: {item_code}, Unit: {unit}, Qty: {quantity}, Loss: {loss_qty}, Net Qty: {net_qty}, Price: {unit_price}, Total: {total_amount}")
                         
-                        # Add ingredient with properly parsed fields
+                        # Add ingredient with all ABGN fields properly mapped
                         ingredients.append({
-                            "name": ingredient_name,
                             "item_code": item_code,
+                            "name": ingredient_name,
                             "unit": unit,
-                            "amount": quantity,
+                            "qty": quantity,
+                            "loss": loss_qty,
+                            "net_qty": net_qty,
                             "unit_cost": unit_price,
                             "total_cost": total_amount
                         })
