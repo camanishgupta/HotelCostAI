@@ -1,11 +1,11 @@
 {
   "metadata": {
-    "last_updated": "2025-04-16T13:26:57.964174",
+    "last_updated": "2025-04-16T14:18:23.856882",
     "record_count": 56
   },
   "data": [
     {
-      "name": "NAME",
+      "name": "Tea Leave Salad",
       "category": "Appetizer & Salad",
       "yield_amount": 2435.710992116615,
       "yield_unit": "serving",
@@ -111,10 +111,10 @@
           "total_cost": 200.0
         }
       ],
-      "total_cost": 1.159862377198388,
-      "sales_price": 7943.51279788173,
-      "cost_percentage": 0.014601378592953039,
-      "imported_at": "2025-04-16T13:26:44.085009"
+      "total_cost": 2435.710992116615,
+      "sales_price": 9000.0,
+      "cost_percentage": 27.063455467962395,
+      "imported_at": "2025-04-16T14:18:08.684770"
     },
     {
       "name": "NAME  :",
@@ -153,10 +153,10 @@
           "total_cost": 127.71084337349397
         }
       ],
-      "total_cost": 0.8579575444635685,
-      "sales_price": 7943.51279788173,
-      "cost_percentage": 0.010800732198635813,
-      "imported_at": "2025-04-16T13:26:44.087536"
+      "total_cost": 1801.710843373494,
+      "sales_price": 9000.0,
+      "cost_percentage": 20.0190093708166,
+      "imported_at": "2025-04-16T14:18:08.687822"
     },
     {
       "name": "NAME  :",
@@ -195,10 +195,10 @@
           "total_cost": 50.60240963855421
         }
       ],
-      "total_cost": 1.621239242685026,
-      "sales_price": 9708.73786407767,
-      "cost_percentage": 0.01669876419965577,
-      "imported_at": "2025-04-16T13:26:44.089599"
+      "total_cost": 3404.602409638554,
+      "sales_price": 11000.0,
+      "cost_percentage": 30.950930996714128,
+      "imported_at": "2025-04-16T14:18:08.690937"
     },
     {
       "name": "NAME  :",
@@ -277,10 +277,10 @@
           "total_cost": 206.0
         }
       ],
-      "total_cost": 2.600584479717812,
-      "sales_price": 14121.80052956752,
-      "cost_percentage": 0.018415388847001758,
-      "imported_at": "2025-04-16T13:26:44.092268"
+      "total_cost": 5461.227407407407,
+      "sales_price": 16000.0,
+      "cost_percentage": 34.132671296296294,
+      "imported_at": "2025-04-16T14:18:08.694590"
     },
     {
       "name": "NAME  :",
@@ -374,7 +374,7 @@
           "unit": "Bot",
           "qty": 0.01,
           "loss": 0.0,
-          "net_qty": 0.03,
+          "net_qty": 0.01,
           "unit_cost": 10120.481927710842,
           "total_cost": 303.61445783132524
         },
@@ -439,10 +439,10 @@
           "total_cost": 214.20000000000002
         }
       ],
-      "total_cost": 1.6172925989672975,
-      "sales_price": 9708.73786407767,
-      "cost_percentage": 0.016658113769363166,
-      "imported_at": "2025-04-16T13:26:44.095783"
+      "total_cost": 3396.3144578313254,
+      "sales_price": 11000.0,
+      "cost_percentage": 30.875585980284775,
+      "imported_at": "2025-04-16T14:18:08.699155"
     },
     {
       "name": "NAME  :",
@@ -551,10 +551,10 @@
           "total_cost": 360.50000000000006
         }
       ],
-      "total_cost": 2.6231413654618474,
-      "sales_price": 11473.96293027361,
-      "cost_percentage": 0.022861685900525175,
-      "imported_at": "2025-04-16T13:26:44.099378"
+      "total_cost": 4114.854819277109,
+      "sales_price": 15000.0,
+      "cost_percentage": 27.43236546184739,
+      "imported_at": "2025-04-16T14:18:08.704189"
     },
     {
       "name": "Grilled Pork Neck Salad",
@@ -683,10 +683,10 @@
           "total_cost": 130.0
         }
       ],
-      "total_cost": 2.3099784853700527,
-      "sales_price": 13239.187996469549,
-      "cost_percentage": 0.017448037492828465,
-      "imported_at": "2025-04-16T13:26:44.102378"
+      "total_cost": 4850.954819277109,
+      "sales_price": 15000.0,
+      "cost_percentage": 32.33969879518072,
+      "imported_at": "2025-04-16T14:18:08.708539"
     },
     {
       "name": "NAME  :",
@@ -750,7 +750,7 @@
           "unit": "Bot",
           "qty": 0.01,
           "loss": 0.0,
-          "net_qty": 0.02,
+          "net_qty": 0.01,
           "unit_cost": 8500.0,
           "total_cost": 170.0
         },
@@ -765,10 +765,10 @@
           "total_cost": 140.0
         }
       ],
-      "total_cost": 2.604633333333334,
-      "sales_price": 15887.02559576346,
-      "cost_percentage": 0.01639471981481482,
-      "imported_at": "2025-04-16T13:26:44.104991"
+      "total_cost": 5469.73,
+      "sales_price": 18000.0,
+      "cost_percentage": 30.38738888888889,
+      "imported_at": "2025-04-16T14:18:08.712071"
     },
     {
       "name": "NAME  :",
@@ -877,10 +877,10 @@
           "total_cost": 140.0
         }
       ],
-      "total_cost": 2.4054761904761905,
-      "sales_price": 13239.187996469549,
-      "cost_percentage": 0.018169363492063495,
-      "imported_at": "2025-04-16T13:26:44.203109"
+      "total_cost": 4892.204819277108,
+      "sales_price": 12000.0,
+      "cost_percentage": 40.7683734939759,
+      "imported_at": "2025-04-16T14:18:08.830404"
     },
     {
       "name": "NAME  :",
@@ -979,10 +979,10 @@
           "total_cost": 70.0
         }
       ],
-      "total_cost": 2.732478485370052,
-      "sales_price": 13239.187996469549,
-      "cost_percentage": 0.020639320826161794,
-      "imported_at": "2025-04-16T13:26:44.205810"
+      "total_cost": 5738.204819277108,
+      "sales_price": 15000.0,
+      "cost_percentage": 38.25469879518072,
+      "imported_at": "2025-04-16T14:18:08.834545"
     },
     {
       "name": "NAME  :",
@@ -1101,10 +1101,10 @@
           "total_cost": 35.0
         }
       ],
-      "total_cost": 1.8380996472663138,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.017354724169606112,
-      "imported_at": "2025-04-16T13:26:44.209411"
+      "total_cost": 3860.009259259259,
+      "sales_price": 13000.0,
+      "cost_percentage": 29.692378917378914,
+      "imported_at": "2025-04-16T14:18:08.839989"
     },
     {
       "name": "NAME  :",
@@ -1183,10 +1183,10 @@
           "total_cost": 350.0
         }
       ],
-      "total_cost": 1.5591428571428574,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.014720907142857145,
-      "imported_at": "2025-04-16T13:26:44.211923"
+      "total_cost": 3274.2,
+      "sales_price": 13000.0,
+      "cost_percentage": 25.186153846153847,
+      "imported_at": "2025-04-16T14:18:08.843887"
     },
     {
       "name": "NAME  :",
@@ -1210,7 +1210,7 @@
           "unit": "Viss",
           "qty": 0.03,
           "loss": 0.2,
-          "net_qty": 0.05,
+          "net_qty": 0.036,
           "unit_cost": 4500.0,
           "total_cost": 225.0
         },
@@ -1255,13 +1255,13 @@
           "total_cost": 120.0
         }
       ],
-      "total_cost": 1.6555651176133102,
-      "sales_price": 11473.96293027361,
-      "cost_percentage": 0.014428886755814463,
-      "imported_at": "2025-04-16T13:26:44.214139"
+      "total_cost": 3476.6867469879517,
+      "sales_price": 13000.0,
+      "cost_percentage": 26.74374420759963,
+      "imported_at": "2025-04-16T14:18:08.847321"
     },
     {
-      "name": "NAME",
+      "name": "Fried Vermicelli with Chicken",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 3001.1066711289604,
       "yield_unit": "serving",
@@ -1397,10 +1397,10 @@
           "total_cost": 380.0
         }
       ],
-      "total_cost": 1.4290984148233143,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.01349307086662346,
-      "imported_at": "2025-04-16T13:26:44.362692"
+      "total_cost": 3001.1066711289604,
+      "sales_price": 12000.0,
+      "cost_percentage": 25.009222259408006,
+      "imported_at": "2025-04-16T14:18:09.010280"
     },
     {
       "name": "NAME  :",
@@ -1539,10 +1539,10 @@
           "total_cost": 380.0
         }
       ],
-      "total_cost": 1.77107372346529,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.016721887739051446,
-      "imported_at": "2025-04-16T13:26:44.366115"
+      "total_cost": 3719.2548192771087,
+      "sales_price": 12000.0,
+      "cost_percentage": 30.993790160642572,
+      "imported_at": "2025-04-16T14:18:09.015198"
     },
     {
       "name": "NAME  :",
@@ -1671,10 +1671,10 @@
           "total_cost": 350.0
         }
       ],
-      "total_cost": 1.950473369669153,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.018415719398626254,
-      "imported_at": "2025-04-16T13:26:44.369217"
+      "total_cost": 4095.9940763052205,
+      "sales_price": 12000.0,
+      "cost_percentage": 34.13328396921017,
+      "imported_at": "2025-04-16T14:18:09.020010"
     },
     {
       "name": "NAME  :",
@@ -1833,10 +1833,10 @@
           "total_cost": 70.0
         }
       ],
-      "total_cost": 1.9381247848537007,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.018299128176993692,
-      "imported_at": "2025-04-16T13:26:44.373507"
+      "total_cost": 4150.448337795627,
+      "sales_price": 12000.0,
+      "cost_percentage": 34.58706948163022,
+      "imported_at": "2025-04-16T14:18:09.025875"
     },
     {
       "name": "NAME  :",
@@ -1975,10 +1975,10 @@
           "total_cost": 380.0
         }
       ],
-      "total_cost": 1.7872641996557663,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.016874752818416525,
-      "imported_at": "2025-04-16T13:26:44.376788"
+      "total_cost": 3753.2548192771087,
+      "sales_price": 12000.0,
+      "cost_percentage": 31.277123493975907,
+      "imported_at": "2025-04-16T14:18:09.030244"
     },
     {
       "name": "NAME  :",
@@ -2052,7 +2052,7 @@
           "unit": "Viss",
           "qty": 0.03,
           "loss": 0.0,
-          "net_qty": 0.02,
+          "net_qty": 0.03,
           "unit_cost": 7800.0,
           "total_cost": 156.0
         },
@@ -2147,10 +2147,10 @@
           "total_cost": 70.0
         }
       ],
-      "total_cost": 1.9365221361637026,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.01828399650227896,
-      "imported_at": "2025-04-16T13:26:44.380509"
+      "total_cost": 4066.696485943775,
+      "sales_price": 12000.0,
+      "cost_percentage": 33.889137382864796,
+      "imported_at": "2025-04-16T14:18:09.035396"
     },
     {
       "name": "NAME  :",
@@ -2329,10 +2329,10 @@
           "total_cost": 70.0
         }
       ],
-      "total_cost": 2.0896667569749896,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.019729936963772194,
-      "imported_at": "2025-04-16T13:26:44.384323"
+      "total_cost": 4388.300189647478,
+      "sales_price": 12000.0,
+      "cost_percentage": 36.569168247062315,
+      "imported_at": "2025-04-16T14:18:09.041219"
     },
     {
       "name": "NAME  :",
@@ -2501,10 +2501,10 @@
           "total_cost": 140.0
         }
       ],
-      "total_cost": 1.948128045515395,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.01839357562974119,
-      "imported_at": "2025-04-16T13:26:44.387872"
+      "total_cost": 4091.068895582329,
+      "sales_price": 12000.0,
+      "cost_percentage": 34.092240796519405,
+      "imported_at": "2025-04-16T14:18:09.045993"
     },
     {
       "name": "NAME  :",
@@ -2568,7 +2568,7 @@
           "unit": "Viss",
           "qty": 0.03,
           "loss": 0.0,
-          "net_qty": 0.02,
+          "net_qty": 0.03,
           "unit_cost": 7800.0,
           "total_cost": 156.0
         },
@@ -2663,10 +2663,10 @@
           "total_cost": 140.0
         }
       ],
-      "total_cost": 1.9009456821996986,
-      "sales_price": 10591.35039717564,
-      "cost_percentage": 0.01794809548276882,
-      "imported_at": "2025-04-16T13:26:44.391366"
+      "total_cost": 3991.9859326193664,
+      "sales_price": 12000.0,
+      "cost_percentage": 33.26654943849472,
+      "imported_at": "2025-04-16T14:18:09.050533"
     },
     {
       "name": "NAME  :",
@@ -2815,10 +2815,10 @@
           "total_cost": 140.0
         }
       ],
-      "total_cost": 3.290336823484415,
-      "sales_price": 17652.2506619594,
-      "cost_percentage": 0.018639758105039213,
-      "imported_at": "2025-04-16T13:26:44.516596"
+      "total_cost": 6909.707329317269,
+      "sales_price": 20000.0,
+      "cost_percentage": 34.54853664658634,
+      "imported_at": "2025-04-16T14:18:09.190085"
     },
     {
       "name": "NAME  :",
@@ -2967,10 +2967,10 @@
           "total_cost": 494.7916666666667
         }
       ],
-      "total_cost": 3.1613316599732264,
-      "sales_price": 17652.2506619594,
-      "cost_percentage": 0.01790894385374833,
-      "imported_at": "2025-04-16T13:26:44.519975"
+      "total_cost": 6638.796485943775,
+      "sales_price": 20000.0,
+      "cost_percentage": 33.19398242971888,
+      "imported_at": "2025-04-16T14:18:09.195073"
     },
     {
       "name": "NAME  :",
@@ -3119,10 +3119,10 @@
           "total_cost": 494.7916666666667
         }
       ],
-      "total_cost": 3.1032352744310576,
-      "sales_price": 17652.2506619594,
-      "cost_percentage": 0.01757982782965194,
-      "imported_at": "2025-04-16T13:26:44.523421"
+      "total_cost": 6516.794076305221,
+      "sales_price": 20000.0,
+      "cost_percentage": 32.58397038152611,
+      "imported_at": "2025-04-16T14:18:09.199803"
     },
     {
       "name": "NAME  :",
@@ -3221,10 +3221,10 @@
           "total_cost": 140.0
         }
       ],
-      "total_cost": 2.7909507075922746,
-      "sales_price": 22065.31332744925,
-      "cost_percentage": 0.012648588606808188,
-      "imported_at": "2025-04-16T13:26:44.531157"
+      "total_cost": 5860.996485943775,
+      "sales_price": 25000.0,
+      "cost_percentage": 23.4439859437751,
+      "imported_at": "2025-04-16T14:18:09.210637"
     },
     {
       "name": "NAME  :",
@@ -3343,10 +3343,10 @@
           "total_cost": 35.0
         }
       ],
-      "total_cost": 2.748569755211322,
-      "sales_price": 17652.2506619594,
-      "cost_percentage": 0.015570647663272142,
-      "imported_at": "2025-04-16T13:26:44.537558"
+      "total_cost": 5771.996485943775,
+      "sales_price": 20000.0,
+      "cost_percentage": 28.859982429718876,
+      "imported_at": "2025-04-16T14:18:09.219488"
     },
     {
       "name": "NAME  :",
@@ -3495,10 +3495,10 @@
           "total_cost": 494.7916666666667
         }
       ],
-      "total_cost": 4.783093564735131,
-      "sales_price": 26478.375992939098,
-      "cost_percentage": 0.01806415002948301,
-      "imported_at": "2025-04-16T13:26:44.546106"
+      "total_cost": 10044.496485943777,
+      "sales_price": 30000.0,
+      "cost_percentage": 33.48165495314592,
+      "imported_at": "2025-04-16T14:18:09.229709"
     },
     {
       "name": "NAME  :",
@@ -3637,10 +3637,10 @@
           "total_cost": 60.0
         }
       ],
-      "total_cost": 2.1676190476190476,
-      "sales_price": 13239.187996469549,
-      "cost_percentage": 0.016372749206349207,
-      "imported_at": "2025-04-16T13:26:44.647490"
+      "total_cost": 4552.0,
+      "sales_price": 15000.0,
+      "cost_percentage": 30.346666666666668,
+      "imported_at": "2025-04-16T14:18:09.344015"
     },
     {
       "name": "NAME  :",
@@ -3849,10 +3849,10 @@
           "total_cost": 60.0
         }
       ],
-      "total_cost": 2.669523809523809,
-      "sales_price": 15887.02559576346,
-      "cost_percentage": 0.016803169312169308,
-      "imported_at": "2025-04-16T13:26:44.652076"
+      "total_cost": 5606.0,
+      "sales_price": 18000.0,
+      "cost_percentage": 31.144444444444446,
+      "imported_at": "2025-04-16T14:18:09.349685"
     },
     {
       "name": "NAME  :",
@@ -3996,7 +3996,7 @@
           "unit": "Viss",
           "qty": 0.02,
           "loss": 0.2,
-          "net_qty": 0.02,
+          "net_qty": 0.024,
           "unit_cost": 5000.0,
           "total_cost": 100.0
         },
@@ -4006,7 +4006,7 @@
           "unit": "Viss",
           "qty": 0.02,
           "loss": 0.2,
-          "net_qty": 0.02,
+          "net_qty": 0.024,
           "unit_cost": 21000.0,
           "total_cost": 420.0
         },
@@ -4061,10 +4061,10 @@
           "total_cost": 60.0
         }
       ],
-      "total_cost": 3.8828571428571417,
-      "sales_price": 3.0,
-      "cost_percentage": 129.4285714285714,
-      "imported_at": "2025-04-16T13:26:44.656499"
+      "total_cost": 8154.0,
+      "sales_price": 20000.0,
+      "cost_percentage": 40.77,
+      "imported_at": "2025-04-16T14:18:09.356241"
     },
     {
       "name": "NAME  :",
@@ -4173,10 +4173,10 @@
           "total_cost": 202.40963855421683
         }
       ],
-      "total_cost": 2.2473202864367523,
-      "sales_price": 13239.187996469549,
-      "cost_percentage": 0.016974759230218937,
-      "imported_at": "2025-04-16T13:26:44.790650"
+      "total_cost": 4719.372601517181,
+      "sales_price": 15000.0,
+      "cost_percentage": 31.46248401011454,
+      "imported_at": "2025-04-16T14:18:09.495189"
     },
     {
       "name": "NAME  :",
@@ -4278,7 +4278,7 @@
       "total_cost": 3.168274137112825,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.017948272986744153,
-      "imported_at": "2025-04-16T13:26:44.793411"
+      "imported_at": "2025-04-16T14:18:09.501038"
     },
     {
       "name": "NAME  :",
@@ -4352,7 +4352,7 @@
           "unit": "Viss",
           "qty": 0.03,
           "loss": 0.2,
-          "net_qty": 0.03,
+          "net_qty": 0.036,
           "unit_cost": 4500.0,
           "total_cost": 135.0
         },
@@ -4390,7 +4390,7 @@
       "total_cost": 1.8839070567986231,
       "sales_price": 0,
       "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:26:44.895817"
+      "imported_at": "2025-04-16T14:18:09.609241"
     },
     {
       "name": "NAME  :",
@@ -4404,7 +4404,7 @@
           "unit": "kg",
           "qty": 0.05,
           "loss": 0.34,
-          "net_qty": 0.05,
+          "net_qty": 0.067,
           "unit_cost": 13580.246913580246,
           "total_cost": 679.0123456790124
         },
@@ -4414,7 +4414,7 @@
           "unit": "kg",
           "qty": 0.05,
           "loss": 0.19,
-          "net_qty": 0.05,
+          "net_qty": 0.059500000000000004,
           "unit_cost": 13580.246913580246,
           "total_cost": 679.0123456790124
         },
@@ -4444,7 +4444,7 @@
           "unit": "Bdl",
           "qty": 0.1,
           "loss": 0.05,
-          "net_qty": 0.1,
+          "net_qty": 0.10500000000000001,
           "unit_cost": 500.0,
           "total_cost": 50.0
         },
@@ -4454,7 +4454,7 @@
           "unit": "kg",
           "qty": 0.02,
           "loss": 0.1,
-          "net_qty": 0.02,
+          "net_qty": 0.022,
           "unit_cost": 10000.0,
           "total_cost": 200.0
         },
@@ -4464,7 +4464,7 @@
           "unit": "pcs",
           "qty": 0.03,
           "loss": 0.1,
-          "net_qty": 0.03,
+          "net_qty": 0.033,
           "unit_cost": 1400.0,
           "total_cost": 42.0
         },
@@ -4474,7 +4474,7 @@
           "unit": "kg",
           "qty": 0.02,
           "loss": 0.08,
-          "net_qty": 0.02,
+          "net_qty": 0.0216,
           "unit_cost": 6000.0,
           "total_cost": 120.0
         },
@@ -4484,7 +4484,7 @@
           "unit": "Nos",
           "qty": 0.02,
           "loss": 0.05,
-          "net_qty": 0.02,
+          "net_qty": 0.021,
           "unit_cost": 400.0,
           "total_cost": 8.0
         },
@@ -4502,7 +4502,7 @@
       "total_cost": 1.8334879482657258,
       "sales_price": 0,
       "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:26:44.899046"
+      "imported_at": "2025-04-16T14:18:09.615367"
     },
     {
       "name": "NAME  :",
@@ -4576,7 +4576,7 @@
           "unit": "Viss",
           "qty": 0.02,
           "loss": 0.2,
-          "net_qty": 0.02,
+          "net_qty": 0.024,
           "unit_cost": 4500.0,
           "total_cost": 90.0
         },
@@ -4616,7 +4616,7 @@
           "unit": "Bdl",
           "qty": 0.2,
           "loss": 0.05,
-          "net_qty": 0.2,
+          "net_qty": 0.21000000000000002,
           "unit_cost": 500.0,
           "total_cost": 100.0
         }
@@ -4624,7 +4624,7 @@
       "total_cost": 2.13104991394148,
       "sales_price": 0,
       "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:26:44.902076"
+      "imported_at": "2025-04-16T14:18:09.621323"
     },
     {
       "name": "NAME  :",
@@ -4748,7 +4748,7 @@
           "unit": "viss",
           "qty": 0.05,
           "loss": 0.2,
-          "net_qty": 0.05,
+          "net_qty": 0.060000000000000005,
           "unit_cost": 8000.0,
           "total_cost": 400.0
         },
@@ -4768,15 +4768,15 @@
           "unit": "Bdl",
           "qty": 0.2,
           "loss": 0.1,
-          "net_qty": 0.2,
+          "net_qty": 0.22000000000000003,
           "unit_cost": 350.0,
           "total_cost": 70.0
         }
       ],
-      "total_cost": 5.664542857142857,
-      "sales_price": 2.0,
-      "cost_percentage": 283.22714285714284,
-      "imported_at": "2025-04-16T13:26:45.006861"
+      "total_cost": 11895.54,
+      "sales_price": 60000.0,
+      "cost_percentage": 19.8259,
+      "imported_at": "2025-04-16T14:18:09.738790"
     },
     {
       "name": "NAME  :",
@@ -4915,10 +4915,10 @@
           "total_cost": 35.0
         }
       ],
-      "total_cost": 6.555876190476189,
-      "sales_price": 3.0,
-      "cost_percentage": 218.5292063492063,
-      "imported_at": "2025-04-16T13:26:45.010200"
+      "total_cost": 13767.34,
+      "sales_price": 60000.0,
+      "cost_percentage": 22.945566666666668,
+      "imported_at": "2025-04-16T14:18:09.743795"
     },
     {
       "name": "NAME  :",
@@ -5042,15 +5042,15 @@
           "unit": "Bdl",
           "qty": 0.2,
           "loss": 0.1,
-          "net_qty": 0.2,
+          "net_qty": 0.22000000000000003,
           "unit_cost": 350.0,
           "total_cost": 70.0
         }
       ],
-      "total_cost": 8.884197418244405,
-      "sales_price": 4.0,
-      "cost_percentage": 222.10493545611013,
-      "imported_at": "2025-04-16T13:26:45.013343"
+      "total_cost": 18656.81457831325,
+      "sales_price": 60000.0,
+      "cost_percentage": 31.094690963855413,
+      "imported_at": "2025-04-16T14:18:09.748661"
     },
     {
       "name": "NAME  :",
@@ -5134,7 +5134,7 @@
           "unit": "Nos",
           "qty": 0.01,
           "loss": 0.2,
-          "net_qty": 0.01,
+          "net_qty": 0.012,
           "unit_cost": 1400.0,
           "total_cost": 14.0
         },
@@ -5144,7 +5144,7 @@
           "unit": "Viss",
           "qty": 0.02,
           "loss": 0.2,
-          "net_qty": 0.02,
+          "net_qty": 0.024,
           "unit_cost": 10000.0,
           "total_cost": 200.0
         },
@@ -5154,15 +5154,15 @@
           "unit": "Viss",
           "qty": 0.01,
           "loss": 0.2,
-          "net_qty": 0.01,
+          "net_qty": 0.012,
           "unit_cost": 21000.0,
           "total_cost": 210.0
         }
       ],
-      "total_cost": 12.615599999999995,
-      "sales_price": 0,
-      "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:26:45.016157"
+      "total_cost": 26492.76,
+      "sales_price": 80000.0,
+      "cost_percentage": 33.11595,
+      "imported_at": "2025-04-16T14:18:09.754170"
     },
     {
       "name": "NAME  :",
@@ -5276,7 +5276,7 @@
           "unit": "viss",
           "qty": 0.02,
           "loss": 0.2,
-          "net_qty": 0.02,
+          "net_qty": 0.024,
           "unit_cost": 10000.0,
           "total_cost": 200.0
         },
@@ -5286,7 +5286,7 @@
           "unit": "Bdl",
           "qty": 0.2,
           "loss": 0.2,
-          "net_qty": 0.2,
+          "net_qty": 0.24000000000000002,
           "unit_cost": 600.0,
           "total_cost": 120.0
         },
@@ -5296,7 +5296,7 @@
           "unit": "viss",
           "qty": 0.02,
           "loss": 0.08,
-          "net_qty": 0.02,
+          "net_qty": 0.0216,
           "unit_cost": 6000.0,
           "total_cost": 120.0
         },
@@ -5306,15 +5306,15 @@
           "unit": "nos",
           "qty": 0.02,
           "loss": 0.2,
-          "net_qty": 0.02,
+          "net_qty": 0.024,
           "unit_cost": 1400.0,
           "total_cost": 28.0
         }
       ],
-      "total_cost": 11.74285714285714,
-      "sales_price": 6.0,
-      "cost_percentage": 195.71428571428567,
-      "imported_at": "2025-04-16T13:26:45.019335"
+      "total_cost": 24659.999999999996,
+      "sales_price": 80000.0,
+      "cost_percentage": 30.824999999999996,
+      "imported_at": "2025-04-16T14:18:09.759956"
     },
     {
       "name": "NAME  :",
@@ -5413,10 +5413,10 @@
           "total_cost": 500.0
         }
       ],
-      "total_cost": 3.34552380952381,
-      "sales_price": 22065.31332744925,
-      "cost_percentage": 0.015161913904761907,
-      "imported_at": "2025-04-16T13:26:45.157810"
+      "total_cost": 7025.6,
+      "sales_price": 25000.0,
+      "cost_percentage": 28.1024,
+      "imported_at": "2025-04-16T14:18:09.924237"
     },
     {
       "name": "NAME  :",
@@ -5695,10 +5695,10 @@
           "total_cost": 735.0000000000001
         }
       ],
-      "total_cost": 4.170382422104644,
-      "sales_price": 22065.31332744925,
-      "cost_percentage": 0.018900173136978244,
-      "imported_at": "2025-04-16T13:26:45.264976"
+      "total_cost": 8757.803086419754,
+      "sales_price": 25000.0,
+      "cost_percentage": 35.031212345679016,
+      "imported_at": "2025-04-16T14:18:10.036023"
     },
     {
       "name": "Club Sandwich",
@@ -5787,10 +5787,10 @@
           "total_cost": 55.0
         }
       ],
-      "total_cost": 3.9603333333333333,
-      "sales_price": 22065.31332744925,
-      "cost_percentage": 0.017948230666666665,
-      "imported_at": "2025-04-16T13:26:45.268215"
+      "total_cost": 723.95,
+      "sales_price": 25000.0,
+      "cost_percentage": 2.8958,
+      "imported_at": "2025-04-16T14:18:10.040259"
     },
     {
       "name": "Classic Fish & Chips",
@@ -5949,10 +5949,10 @@
           "total_cost": 95.0
         }
       ],
-      "total_cost": 3.4858964429145147,
-      "sales_price": 22065.31332744925,
-      "cost_percentage": 0.01579808267928858,
-      "imported_at": "2025-04-16T13:26:45.271355"
+      "total_cost": 7320.3825301204815,
+      "sales_price": 25000.0,
+      "cost_percentage": 29.281530120481925,
+      "imported_at": "2025-04-16T14:18:10.045817"
     },
     {
       "name": "NAME  :",
@@ -6011,15 +6011,15 @@
           "total_cost": 180.0
         }
       ],
-      "total_cost": 1.4104761904761904,
-      "sales_price": 7060.90026478376,
-      "cost_percentage": 0.019975869047619048,
-      "imported_at": "2025-04-16T13:26:45.372487"
+      "total_cost": 2962.0,
+      "sales_price": 8000.0,
+      "cost_percentage": 37.025000000000006,
+      "imported_at": "2025-04-16T14:18:10.158068"
     },
     {
       "name": "NAME  :",
       "category": "Dessert",
-      "yield_amount": 975.1787037037036,
+      "yield_amount": 10.0,
       "yield_unit": "serving",
       "ingredients": [
         {
@@ -6088,7 +6088,7 @@
           "unit": "nos",
           "qty": 0.5,
           "loss": 0.2,
-          "net_qty": 0.5,
+          "net_qty": 0.6,
           "unit_cost": 4000.0,
           "total_cost": 2000.0
         },
@@ -6098,7 +6098,7 @@
           "unit": "nos",
           "qty": 0.5,
           "loss": 0.1,
-          "net_qty": 0.5,
+          "net_qty": 0.55,
           "unit_cost": 3500.0,
           "total_cost": 1750.0
         },
@@ -6108,20 +6108,20 @@
           "unit": "nos",
           "qty": 0.6,
           "loss": 0.2,
-          "net_qty": 0.6,
+          "net_qty": 0.72,
           "unit_cost": 1800.0,
           "total_cost": 1080.0
         }
       ],
-      "total_cost": 4.643708112874779,
-      "sales_price": 6178.28773168579,
-      "cost_percentage": 0.07516173274124463,
-      "imported_at": "2025-04-16T13:26:45.375400"
+      "total_cost": 9751.787037037036,
+      "sales_price": 7000.0,
+      "cost_percentage": 139.31124338624338,
+      "imported_at": "2025-04-16T14:18:10.161684"
     },
     {
       "name": "NAME  :",
       "category": "Dessert",
-      "yield_amount": 1928.0,
+      "yield_amount": 10.0,
       "yield_unit": "serving",
       "ingredients": [
         {
@@ -6185,15 +6185,15 @@
           "total_cost": 340.0
         }
       ],
-      "total_cost": 9.18095238095238,
-      "sales_price": 6178.28773168579,
-      "cost_percentage": 0.14860027210884352,
-      "imported_at": "2025-04-16T13:26:45.377950"
+      "total_cost": 19280.0,
+      "sales_price": 7000.0,
+      "cost_percentage": 275.42857142857144,
+      "imported_at": "2025-04-16T14:18:10.164933"
     },
     {
       "name": "NAME  :",
       "category": "Dessert",
-      "yield_amount": 1798.3333333333333,
+      "yield_amount": 12.0,
       "yield_unit": "serving",
       "ingredients": [
         {
@@ -6267,15 +6267,15 @@
           "total_cost": 600.0
         }
       ],
-      "total_cost": 10.276190476190477,
-      "sales_price": 6178.28773168579,
-      "cost_percentage": 0.1663274829931973,
-      "imported_at": "2025-04-16T13:26:45.380581"
+      "total_cost": 21580.0,
+      "sales_price": 7000.0,
+      "cost_percentage": 308.2857142857143,
+      "imported_at": "2025-04-16T14:18:10.169122"
     },
     {
       "name": "NAME  :",
       "category": "Dessert",
-      "yield_amount": 828.8,
+      "yield_amount": 10.0,
       "yield_unit": "serving",
       "ingredients": [
         {
@@ -6329,15 +6329,15 @@
           "total_cost": 3000.0
         }
       ],
-      "total_cost": 3.9466666666666668,
-      "sales_price": 6178.28773168579,
-      "cost_percentage": 0.06387961904761905,
-      "imported_at": "2025-04-16T13:26:45.383222"
+      "total_cost": 16250.0,
+      "sales_price": 7000.0,
+      "cost_percentage": 232.14285714285717,
+      "imported_at": "2025-04-16T14:18:10.172113"
     },
     {
       "name": "NAME  :",
       "category": "Dessert",
-      "yield_amount": 1787.9074074074074,
+      "yield_amount": 5.0,
       "yield_unit": "serving",
       "ingredients": [
         {
@@ -6401,10 +6401,10 @@
           "total_cost": 247.5
         }
       ],
-      "total_cost": 4.256922398589065,
-      "sales_price": 7060.90026478376,
-      "cost_percentage": 0.060288663470017635,
-      "imported_at": "2025-04-16T13:26:45.385581"
+      "total_cost": 8939.537037037036,
+      "sales_price": 8000.0,
+      "cost_percentage": 111.74421296296295,
+      "imported_at": "2025-04-16T14:18:10.175170"
     },
     {
       "name": "NAME  :",
@@ -6483,10 +6483,10 @@
           "total_cost": 7200.0
         }
       ],
-      "total_cost": 5.744285714285715,
-      "sales_price": 7060.90026478376,
-      "cost_percentage": 0.08135344642857144,
-      "imported_at": "2025-04-16T13:26:45.388026"
+      "total_cost": 12063.0,
+      "sales_price": 8000.0,
+      "cost_percentage": 150.7875,
+      "imported_at": "2025-04-16T14:18:10.179115"
     },
     {
       "name": "NAME  :",
@@ -6580,7 +6580,7 @@
           "unit": "Bag",
           "qty": 0.0025,
           "loss": 0.0,
-          "net_qty": 0.003,
+          "net_qty": 0.0025,
           "unit_cost": 3475.0,
           "total_cost": 10.425
         },
@@ -6605,10 +6605,10 @@
           "total_cost": 4200.0
         }
       ],
-      "total_cost": 6.435925610571193,
-      "sales_price": 8826.1253309797,
-      "cost_percentage": 0.07291903716777162,
-      "imported_at": "2025-04-16T13:26:45.526590"
+      "total_cost": 13515.443782199505,
+      "sales_price": 10000.0,
+      "cost_percentage": 135.15443782199506,
+      "imported_at": "2025-04-16T14:18:10.342345"
     },
     {
       "name": "NAME  :",
@@ -6702,7 +6702,7 @@
           "unit": "viss",
           "qty": 0.05,
           "loss": 0.0,
-          "net_qty": 0.1,
+          "net_qty": 0.05,
           "unit_cost": 7800.0,
           "total_cost": 780.0
         },
@@ -6727,10 +6727,10 @@
           "total_cost": 43.75
         }
       ],
-      "total_cost": 2.716547619047619,
-      "sales_price": 17652.2506619594,
-      "cost_percentage": 0.015389242261904764,
-      "imported_at": "2025-04-16T13:26:45.529814"
+      "total_cost": 5704.75,
+      "sales_price": 20000.0,
+      "cost_percentage": 28.523749999999996,
+      "imported_at": "2025-04-16T14:18:10.346870"
     },
     {
       "name": "Tom & Jerry\u2019s Sandwich",
@@ -6814,7 +6814,7 @@
           "unit": "Viss",
           "qty": 0.03,
           "loss": 0.1,
-          "net_qty": 0.03,
+          "net_qty": 0.033,
           "unit_cost": 10000.0,
           "total_cost": 300.0
         },
@@ -6859,10 +6859,10 @@
           "total_cost": 12.0
         }
       ],
-      "total_cost": 3.893479632816982,
-      "sales_price": 22065.31332744925,
-      "cost_percentage": 0.017645249695926565,
-      "imported_at": "2025-04-16T13:26:45.532742"
+      "total_cost": 8176.307228915663,
+      "sales_price": 25000.0,
+      "cost_percentage": 32.70522891566265,
+      "imported_at": "2025-04-16T14:18:10.351135"
     },
     {
       "name": "Snow White's Spaghetti",
@@ -6981,10 +6981,10 @@
           "total_cost": 53.132530120481924
         }
       ],
-      "total_cost": 2.9062535857716583,
-      "sales_price": 17652.2506619594,
-      "cost_percentage": 0.016463926563396444,
-      "imported_at": "2025-04-16T13:26:45.535484"
+      "total_cost": 6103.1325301204815,
+      "sales_price": 20000.0,
+      "cost_percentage": 30.51566265060241,
+      "imported_at": "2025-04-16T14:18:10.355088"
     }
   ]
 }
