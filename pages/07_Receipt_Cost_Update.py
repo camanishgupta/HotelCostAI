@@ -289,8 +289,8 @@ with tab1:
                 
                 # Update button
                 if st.button("Update Recipe Costs"):
-                    if not st.session_state.recipes or not st.session_state.inventory:
-                        st.error("You need both recipes and inventory data to update costs.")
+                    if not st.session_state.recipes:
+                        st.error("You need recipe data to update costs.")
                     elif not name_col and not item_code_col:
                         st.error("You must select at least an item code or name column.")
                     elif not unit_price_col:

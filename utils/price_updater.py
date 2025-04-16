@@ -165,19 +165,37 @@ def get_conversion_factor(from_unit, to_unit):
     # No conversion found, return 1.0 as default
     return 1.0
 
-def match_inventory_items(receipt_items, inventory_items, threshold=0.7):
+def match_inventory_items(receipt_items, inventory_items=None, threshold=0.7):
     """
-    Match receipt items to inventory items based on name similarity
+    Match receipt items to inventory items based on name similarity.
+    If inventory_items is None, use receipt item codes directly.
     
     Args:
         receipt_items (list): List of receipt items with 'item_code' and 'name'
-        inventory_items (list): List of inventory items with 'item_code' and 'name'
+        inventory_items (list, optional): List of inventory items with 'item_code' and 'name'
         threshold (float): Minimum similarity score to consider a match
         
     Returns:
         dict: Mapping of receipt item codes to inventory item codes
     """
     matches = {}
+    
+    # If no inventory items provided, use receipt item codes directly
+    if inventory_items is None:
+        # Create direct mapping using the item codes from receipt items
+        for item in receipt_items:
+            if isinstance(item, dict) and item.get('item_code', ''):
+                matches[item['item_code']] = item['item_code']
+            elif isinstance(item, str):
+                try:
+                    # Try to parse as JSON if it's a string
+                    import json
+                    item_dict = json.loads(item)
+                    if item_dict.get('item_code', ''):
+                        matches[item_dict['item_code']] = item_dict['item_code']
+                except:
+                    pass
+        return matches
     
     # Convert any string items to dictionaries
     processed_receipt_items = []
@@ -258,20 +276,20 @@ def match_inventory_items(receipt_items, inventory_items, threshold=0.7):
     
     return matches
 
-def update_recipe_costs(recipes, inventory_items, receipt_items, match_threshold=0.7):
+def update_recipe_costs(recipes, inventory_items=None, receipt_items=None, match_threshold=0.7):
     """
-    Update recipe costs based on receipt data and inventory items
+    Update recipe costs based on receipt data (optionally using inventory items)
     
     Args:
         recipes (list): List of recipe dictionaries
-        inventory_items (list): List of inventory item dictionaries
-        receipt_items (list): List of receipt item dictionaries
+        inventory_items (list, optional): List of inventory item dictionaries
+        receipt_items (list, optional): List of receipt item dictionaries
         match_threshold (float, optional): Threshold for fuzzy matching of ingredient names (0.0-1.0)
         
     Returns:
         tuple: (updated_recipes, update_summary)
     """
-    if not recipes or not inventory_items or not receipt_items:
+    if not recipes or not receipt_items:
         return recipes, {"error": "Missing required data"}
     
     # Track changes for reporting
