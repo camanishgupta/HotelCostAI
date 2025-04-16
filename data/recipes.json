@@ -1,11 +1,11 @@
 {
   "metadata": {
-    "last_updated": "2025-04-16T13:16:06.369773",
+    "last_updated": "2025-04-16T13:26:57.964174",
     "record_count": 56
   },
   "data": [
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME",
       "category": "Appetizer & Salad",
       "yield_amount": 2435.710992116615,
       "yield_unit": "serving",
@@ -114,10 +114,10 @@
       "total_cost": 1.159862377198388,
       "sales_price": 7943.51279788173,
       "cost_percentage": 0.014601378592953039,
-      "imported_at": "2025-04-16T13:15:40.696513"
+      "imported_at": "2025-04-16T13:26:44.085009"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Appetizer & Salad",
       "yield_amount": 1801.710843373494,
       "yield_unit": "serving",
@@ -156,10 +156,10 @@
       "total_cost": 0.8579575444635685,
       "sales_price": 7943.51279788173,
       "cost_percentage": 0.010800732198635813,
-      "imported_at": "2025-04-16T13:15:40.698596"
+      "imported_at": "2025-04-16T13:26:44.087536"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Appetizer & Salad",
       "yield_amount": 3404.602409638554,
       "yield_unit": "serving",
@@ -198,10 +198,10 @@
       "total_cost": 1.621239242685026,
       "sales_price": 9708.73786407767,
       "cost_percentage": 0.01669876419965577,
-      "imported_at": "2025-04-16T13:15:40.701307"
+      "imported_at": "2025-04-16T13:26:44.089599"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Appetizer & Salad",
       "yield_amount": 5461.227407407407,
       "yield_unit": "serving",
@@ -280,10 +280,10 @@
       "total_cost": 2.600584479717812,
       "sales_price": 14121.80052956752,
       "cost_percentage": 0.018415388847001758,
-      "imported_at": "2025-04-16T13:15:40.704450"
+      "imported_at": "2025-04-16T13:26:44.092268"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Appetizer & Salad",
       "yield_amount": 3396.3144578313254,
       "yield_unit": "serving",
@@ -442,10 +442,10 @@
       "total_cost": 1.6172925989672975,
       "sales_price": 9708.73786407767,
       "cost_percentage": 0.016658113769363166,
-      "imported_at": "2025-04-16T13:15:40.708973"
+      "imported_at": "2025-04-16T13:26:44.095783"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Appetizer & Salad",
       "yield_amount": 4140.71204819277,
       "yield_unit": "serving",
@@ -554,7 +554,7 @@
       "total_cost": 2.6231413654618474,
       "sales_price": 11473.96293027361,
       "cost_percentage": 0.022861685900525175,
-      "imported_at": "2025-04-16T13:15:40.713034"
+      "imported_at": "2025-04-16T13:26:44.099378"
     },
     {
       "name": "Grilled Pork Neck Salad",
@@ -686,10 +686,10 @@
       "total_cost": 2.3099784853700527,
       "sales_price": 13239.187996469549,
       "cost_percentage": 0.017448037492828465,
-      "imported_at": "2025-04-16T13:15:40.716213"
+      "imported_at": "2025-04-16T13:26:44.102378"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Appetizer & Salad",
       "yield_amount": 5469.73,
       "yield_unit": "serving",
@@ -768,10 +768,10 @@
       "total_cost": 2.604633333333334,
       "sales_price": 15887.02559576346,
       "cost_percentage": 0.01639471981481482,
-      "imported_at": "2025-04-16T13:15:40.718721"
+      "imported_at": "2025-04-16T13:26:44.104991"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Soup",
       "yield_amount": 5297.704819277108,
       "yield_unit": "serving",
@@ -880,10 +880,10 @@
       "total_cost": 2.4054761904761905,
       "sales_price": 13239.187996469549,
       "cost_percentage": 0.018169363492063495,
-      "imported_at": "2025-04-16T13:15:40.833168"
+      "imported_at": "2025-04-16T13:26:44.203109"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Soup",
       "yield_amount": 5738.204819277108,
       "yield_unit": "serving",
@@ -982,10 +982,10 @@
       "total_cost": 2.732478485370052,
       "sales_price": 13239.187996469549,
       "cost_percentage": 0.020639320826161794,
-      "imported_at": "2025-04-16T13:15:40.835790"
+      "imported_at": "2025-04-16T13:26:44.205810"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Soup",
       "yield_amount": 3860.009259259259,
       "yield_unit": "serving",
@@ -1104,10 +1104,10 @@
       "total_cost": 1.8380996472663138,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.017354724169606112,
-      "imported_at": "2025-04-16T13:15:40.839186"
+      "imported_at": "2025-04-16T13:26:44.209411"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Soup",
       "yield_amount": 3274.2,
       "yield_unit": "serving",
@@ -1186,10 +1186,10 @@
       "total_cost": 1.5591428571428574,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.014720907142857145,
-      "imported_at": "2025-04-16T13:15:40.841640"
+      "imported_at": "2025-04-16T13:26:44.211923"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Soup",
       "yield_amount": 3476.6867469879517,
       "yield_unit": "serving",
@@ -1258,10 +1258,10 @@
       "total_cost": 1.6555651176133102,
       "sales_price": 11473.96293027361,
       "cost_percentage": 0.014428886755814463,
-      "imported_at": "2025-04-16T13:15:40.843745"
+      "imported_at": "2025-04-16T13:26:44.214139"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 3001.1066711289604,
       "yield_unit": "serving",
@@ -1400,10 +1400,10 @@
       "total_cost": 1.4290984148233143,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.01349307086662346,
-      "imported_at": "2025-04-16T13:15:40.963787"
+      "imported_at": "2025-04-16T13:26:44.362692"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 3719.2548192771087,
       "yield_unit": "serving",
@@ -1542,10 +1542,10 @@
       "total_cost": 1.77107372346529,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.016721887739051446,
-      "imported_at": "2025-04-16T13:15:40.967465"
+      "imported_at": "2025-04-16T13:26:44.366115"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 4095.9940763052205,
       "yield_unit": "serving",
@@ -1674,10 +1674,10 @@
       "total_cost": 1.950473369669153,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.018415719398626254,
-      "imported_at": "2025-04-16T13:15:40.971029"
+      "imported_at": "2025-04-16T13:26:44.369217"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 4070.0620481927713,
       "yield_unit": "serving",
@@ -1836,10 +1836,10 @@
       "total_cost": 1.9381247848537007,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.018299128176993692,
-      "imported_at": "2025-04-16T13:15:40.975544"
+      "imported_at": "2025-04-16T13:26:44.373507"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 3753.2548192771087,
       "yield_unit": "serving",
@@ -1978,10 +1978,10 @@
       "total_cost": 1.7872641996557663,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.016874752818416525,
-      "imported_at": "2025-04-16T13:15:40.978608"
+      "imported_at": "2025-04-16T13:26:44.376788"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 4066.696485943775,
       "yield_unit": "serving",
@@ -2150,10 +2150,10 @@
       "total_cost": 1.9365221361637026,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.01828399650227896,
-      "imported_at": "2025-04-16T13:15:40.982954"
+      "imported_at": "2025-04-16T13:26:44.380509"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 4388.300189647478,
       "yield_unit": "serving",
@@ -2332,10 +2332,10 @@
       "total_cost": 2.0896667569749896,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.019729936963772194,
-      "imported_at": "2025-04-16T13:15:40.988591"
+      "imported_at": "2025-04-16T13:26:44.384323"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 4091.068895582329,
       "yield_unit": "serving",
@@ -2504,10 +2504,10 @@
       "total_cost": 1.948128045515395,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.01839357562974119,
-      "imported_at": "2025-04-16T13:15:40.993609"
+      "imported_at": "2025-04-16T13:26:44.387872"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Oreintal Rice & Noodle",
       "yield_amount": 3991.9859326193664,
       "yield_unit": "serving",
@@ -2666,10 +2666,10 @@
       "total_cost": 1.9009456821996986,
       "sales_price": 10591.35039717564,
       "cost_percentage": 0.01794809548276882,
-      "imported_at": "2025-04-16T13:15:40.998063"
+      "imported_at": "2025-04-16T13:26:44.391366"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Asian Corner",
       "yield_amount": 6248.502510040161,
       "yield_unit": "serving",
@@ -2818,10 +2818,10 @@
       "total_cost": 3.290336823484415,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.018639758105039213,
-      "imported_at": "2025-04-16T13:15:41.189268"
+      "imported_at": "2025-04-16T13:26:44.516596"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Asian Corner",
       "yield_amount": 5596.004819277108,
       "yield_unit": "serving",
@@ -2970,10 +2970,10 @@
       "total_cost": 3.1613316599732264,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.01790894385374833,
-      "imported_at": "2025-04-16T13:15:41.192656"
+      "imported_at": "2025-04-16T13:26:44.519975"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Asian Corner",
       "yield_amount": 6022.002409638554,
       "yield_unit": "serving",
@@ -3122,10 +3122,10 @@
       "total_cost": 3.1032352744310576,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.01757982782965194,
-      "imported_at": "2025-04-16T13:15:41.195830"
+      "imported_at": "2025-04-16T13:26:44.523421"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Asian Corner",
       "yield_amount": 5860.996485943775,
       "yield_unit": "serving",
@@ -3224,10 +3224,10 @@
       "total_cost": 2.7909507075922746,
       "sales_price": 22065.31332744925,
       "cost_percentage": 0.012648588606808188,
-      "imported_at": "2025-04-16T13:15:41.203146"
+      "imported_at": "2025-04-16T13:26:44.531157"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Asian Corner",
       "yield_amount": 5736.996485943775,
       "yield_unit": "serving",
@@ -3346,10 +3346,10 @@
       "total_cost": 2.748569755211322,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.015570647663272142,
-      "imported_at": "2025-04-16T13:15:41.208781"
+      "imported_at": "2025-04-16T13:26:44.537558"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Asian Corner",
       "yield_amount": 9308.500000000002,
       "yield_unit": "serving",
@@ -3498,10 +3498,10 @@
       "total_cost": 4.783093564735131,
       "sales_price": 26478.375992939098,
       "cost_percentage": 0.01806415002948301,
-      "imported_at": "2025-04-16T13:15:41.216435"
+      "imported_at": "2025-04-16T13:26:44.546106"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Indian Delight",
       "yield_amount": 4552.0,
       "yield_unit": "serving",
@@ -3640,10 +3640,10 @@
       "total_cost": 2.1676190476190476,
       "sales_price": 13239.187996469549,
       "cost_percentage": 0.016372749206349207,
-      "imported_at": "2025-04-16T13:15:41.320709"
+      "imported_at": "2025-04-16T13:26:44.647490"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Indian Delight",
       "yield_amount": 5606.0,
       "yield_unit": "serving",
@@ -3852,10 +3852,10 @@
       "total_cost": 2.669523809523809,
       "sales_price": 15887.02559576346,
       "cost_percentage": 0.016803169312169308,
-      "imported_at": "2025-04-16T13:15:41.324621"
+      "imported_at": "2025-04-16T13:26:44.652076"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Indian Delight",
       "yield_amount": 8154.0,
       "yield_unit": "serving",
@@ -4064,10 +4064,10 @@
       "total_cost": 3.8828571428571417,
       "sales_price": 3.0,
       "cost_percentage": 129.4285714285714,
-      "imported_at": "2025-04-16T13:15:41.328938"
+      "imported_at": "2025-04-16T13:26:44.656499"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Regional Cuisine of Bagan",
       "yield_amount": 4719.372601517181,
       "yield_unit": "serving",
@@ -4176,10 +4176,10 @@
       "total_cost": 2.2473202864367523,
       "sales_price": 13239.187996469549,
       "cost_percentage": 0.016974759230218937,
-      "imported_at": "2025-04-16T13:15:41.423438"
+      "imported_at": "2025-04-16T13:26:44.790650"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Regional Cuisine of Bagan",
       "yield_amount": 6653.375687936933,
       "yield_unit": "serving",
@@ -4278,10 +4278,10 @@
       "total_cost": 3.168274137112825,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.017948272986744153,
-      "imported_at": "2025-04-16T13:15:41.426356"
+      "imported_at": "2025-04-16T13:26:44.793411"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Aureum Signature Dishes",
       "yield_amount": 3956.2048192771085,
       "yield_unit": "serving",
@@ -4390,10 +4390,10 @@
       "total_cost": 1.8839070567986231,
       "sales_price": 0,
       "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:15:41.559647"
+      "imported_at": "2025-04-16T13:26:44.895817"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Aureum Signature Dishes",
       "yield_amount": 3850.3246913580247,
       "yield_unit": "serving",
@@ -4502,10 +4502,10 @@
       "total_cost": 1.8334879482657258,
       "sales_price": 0,
       "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:15:41.562318"
+      "imported_at": "2025-04-16T13:26:44.899046"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Aureum Signature Dishes",
       "yield_amount": 4475.204819277109,
       "yield_unit": "serving",
@@ -4624,10 +4624,10 @@
       "total_cost": 2.13104991394148,
       "sales_price": 0,
       "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:15:41.565515"
+      "imported_at": "2025-04-16T13:26:44.902076"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "From the Grilled",
       "yield_amount": 11895.54,
       "yield_unit": "serving",
@@ -4776,10 +4776,10 @@
       "total_cost": 5.664542857142857,
       "sales_price": 2.0,
       "cost_percentage": 283.22714285714284,
-      "imported_at": "2025-04-16T13:15:41.668536"
+      "imported_at": "2025-04-16T13:26:45.006861"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "From the Grilled",
       "yield_amount": 13767.34,
       "yield_unit": "serving",
@@ -4918,10 +4918,10 @@
       "total_cost": 6.555876190476189,
       "sales_price": 3.0,
       "cost_percentage": 218.5292063492063,
-      "imported_at": "2025-04-16T13:15:41.671695"
+      "imported_at": "2025-04-16T13:26:45.010200"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "From the Grilled",
       "yield_amount": 18656.81457831325,
       "yield_unit": "serving",
@@ -5050,10 +5050,10 @@
       "total_cost": 8.884197418244405,
       "sales_price": 4.0,
       "cost_percentage": 222.10493545611013,
-      "imported_at": "2025-04-16T13:15:41.674852"
+      "imported_at": "2025-04-16T13:26:45.013343"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "From the Grilled",
       "yield_amount": 26492.76,
       "yield_unit": "serving",
@@ -5162,10 +5162,10 @@
       "total_cost": 12.615599999999995,
       "sales_price": 0,
       "cost_percentage": 0,
-      "imported_at": "2025-04-16T13:15:41.677534"
+      "imported_at": "2025-04-16T13:26:45.016157"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "From the Grilled",
       "yield_amount": 24659.999999999996,
       "yield_unit": "serving",
@@ -5314,10 +5314,10 @@
       "total_cost": 11.74285714285714,
       "sales_price": 6.0,
       "cost_percentage": 195.71428571428567,
-      "imported_at": "2025-04-16T13:15:41.680620"
+      "imported_at": "2025-04-16T13:26:45.019335"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Pizza & Pasta",
       "yield_amount": 7025.6,
       "yield_unit": "serving",
@@ -5416,10 +5416,10 @@
       "total_cost": 3.34552380952381,
       "sales_price": 22065.31332744925,
       "cost_percentage": 0.015161913904761907,
-      "imported_at": "2025-04-16T13:15:41.781024"
+      "imported_at": "2025-04-16T13:26:45.157810"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Sandwich and Snack",
       "yield_amount": 8757.803086419754,
       "yield_unit": "serving",
@@ -5698,7 +5698,7 @@
       "total_cost": 4.170382422104644,
       "sales_price": 22065.31332744925,
       "cost_percentage": 0.018900173136978244,
-      "imported_at": "2025-04-16T13:15:41.927688"
+      "imported_at": "2025-04-16T13:26:45.264976"
     },
     {
       "name": "Club Sandwich",
@@ -5790,7 +5790,7 @@
       "total_cost": 3.9603333333333333,
       "sales_price": 22065.31332744925,
       "cost_percentage": 0.017948230666666665,
-      "imported_at": "2025-04-16T13:15:41.930659"
+      "imported_at": "2025-04-16T13:26:45.268215"
     },
     {
       "name": "Classic Fish & Chips",
@@ -5952,10 +5952,10 @@
       "total_cost": 3.4858964429145147,
       "sales_price": 22065.31332744925,
       "cost_percentage": 0.01579808267928858,
-      "imported_at": "2025-04-16T13:15:41.934154"
+      "imported_at": "2025-04-16T13:26:45.271355"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Dessert",
       "yield_amount": 2962.0,
       "yield_unit": "serving",
@@ -6014,10 +6014,10 @@
       "total_cost": 1.4104761904761904,
       "sales_price": 7060.90026478376,
       "cost_percentage": 0.019975869047619048,
-      "imported_at": "2025-04-16T13:15:42.032016"
+      "imported_at": "2025-04-16T13:26:45.372487"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Dessert",
       "yield_amount": 975.1787037037036,
       "yield_unit": "serving",
@@ -6116,10 +6116,10 @@
       "total_cost": 4.643708112874779,
       "sales_price": 6178.28773168579,
       "cost_percentage": 0.07516173274124463,
-      "imported_at": "2025-04-16T13:15:42.034693"
+      "imported_at": "2025-04-16T13:26:45.375400"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Dessert",
       "yield_amount": 1928.0,
       "yield_unit": "serving",
@@ -6188,10 +6188,10 @@
       "total_cost": 9.18095238095238,
       "sales_price": 6178.28773168579,
       "cost_percentage": 0.14860027210884352,
-      "imported_at": "2025-04-16T13:15:42.037729"
+      "imported_at": "2025-04-16T13:26:45.377950"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Dessert",
       "yield_amount": 1798.3333333333333,
       "yield_unit": "serving",
@@ -6270,10 +6270,10 @@
       "total_cost": 10.276190476190477,
       "sales_price": 6178.28773168579,
       "cost_percentage": 0.1663274829931973,
-      "imported_at": "2025-04-16T13:15:42.040210"
+      "imported_at": "2025-04-16T13:26:45.380581"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Dessert",
       "yield_amount": 828.8,
       "yield_unit": "serving",
@@ -6332,10 +6332,10 @@
       "total_cost": 3.9466666666666668,
       "sales_price": 6178.28773168579,
       "cost_percentage": 0.06387961904761905,
-      "imported_at": "2025-04-16T13:15:42.042569"
+      "imported_at": "2025-04-16T13:26:45.383222"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Dessert",
       "yield_amount": 1787.9074074074074,
       "yield_unit": "serving",
@@ -6404,10 +6404,10 @@
       "total_cost": 4.256922398589065,
       "sales_price": 7060.90026478376,
       "cost_percentage": 0.060288663470017635,
-      "imported_at": "2025-04-16T13:15:42.044605"
+      "imported_at": "2025-04-16T13:26:45.385581"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "Dessert",
       "yield_amount": 1507.875,
       "yield_unit": "serving",
@@ -6486,10 +6486,10 @@
       "total_cost": 5.744285714285715,
       "sales_price": 7060.90026478376,
       "cost_percentage": 0.08135344642857144,
-      "imported_at": "2025-04-16T13:15:42.046716"
+      "imported_at": "2025-04-16T13:26:45.388026"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "A Little Aureum",
       "yield_amount": 2703.088756439901,
       "yield_unit": "serving",
@@ -6608,10 +6608,10 @@
       "total_cost": 6.435925610571193,
       "sales_price": 8826.1253309797,
       "cost_percentage": 0.07291903716777162,
-      "imported_at": "2025-04-16T13:15:42.142581"
+      "imported_at": "2025-04-16T13:26:45.526590"
     },
     {
-      "name": "STANDARD COST RECIPE CARD",
+      "name": "NAME  :",
       "category": "A Little Aureum",
       "yield_amount": 5704.75,
       "yield_unit": "serving",
@@ -6730,7 +6730,7 @@
       "total_cost": 2.716547619047619,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.015389242261904764,
-      "imported_at": "2025-04-16T13:15:42.145456"
+      "imported_at": "2025-04-16T13:26:45.529814"
     },
     {
       "name": "Tom & Jerry\u2019s Sandwich",
@@ -6862,7 +6862,7 @@
       "total_cost": 3.893479632816982,
       "sales_price": 22065.31332744925,
       "cost_percentage": 0.017645249695926565,
-      "imported_at": "2025-04-16T13:15:42.148418"
+      "imported_at": "2025-04-16T13:26:45.532742"
     },
     {
       "name": "Snow White's Spaghetti",
@@ -6984,7 +6984,7 @@
       "total_cost": 2.9062535857716583,
       "sales_price": 17652.2506619594,
       "cost_percentage": 0.016463926563396444,
-      "imported_at": "2025-04-16T13:15:42.150983"
+      "imported_at": "2025-04-16T13:26:45.535484"
     }
   ]
 }
