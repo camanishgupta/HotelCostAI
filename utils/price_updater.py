@@ -341,10 +341,26 @@ def update_recipe_costs(recipes, inventory_items, receipt_items, match_threshold
     # Get ingredient details from inventory lookup
     inventory_lookup = {item.get('item_code', ''): item for item in processed_inventory_items}
     
+    # Process recipes to ensure they're all dictionaries
+    processed_recipes = []
+    for recipe in recipes:
+        if isinstance(recipe, dict):
+            processed_recipes.append(recipe)
+        elif isinstance(recipe, str):
+            try:
+                # Try to parse as JSON if it's a string
+                import json
+                recipe_dict = json.loads(recipe)
+                processed_recipes.append(recipe_dict)
+            except:
+                # If can't parse, skip this recipe
+                st.warning(f"Skipping invalid recipe format: {recipe[:30]}...")
+                continue
+    
     # Update recipe costs
     updated_recipes = []
     
-    for recipe in recipes:
+    for recipe in processed_recipes:
         original_total_cost = recipe.get('total_cost', 0)
         update_summary['total_cost_before'] += original_total_cost
         

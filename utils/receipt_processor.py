@@ -190,20 +190,50 @@ def process_abgn_receipt(file_path, sheet_name=None):
                     all_items.extend(sheet_items)
                     st.success(f"Extracted {len(sheet_items)} items from sheet: {sheet}")
             
-            # Deduplicate items based on item code
-            unique_codes = set()
-            unique_items = []
+            # Keep only the latest item for each code by date
+            items_by_code = {}
             
             for item in all_items:
                 code = item.get('item_code', '')
-                if code and code not in unique_codes:
-                    unique_codes.add(code)
-                    unique_items.append(item)
-                elif not code:
-                    # For items without code, include them all
-                    unique_items.append(item)
+                name = item.get('name', '')
+                date_str = item.get('date', '')
+                
+                if not code and not name:
+                    continue
+                
+                # If we have a date, convert it to a datetime for comparison
+                item_date = None
+                if date_str:
+                    try:
+                        if isinstance(date_str, str):
+                            item_date = datetime.strptime(date_str, '%Y-%m-%d')
+                        elif isinstance(date_str, datetime):
+                            item_date = date_str
+                    except:
+                        # If date parsing fails, assume it's a recent item
+                        pass
+                
+                # Use item code as key, or name if no code
+                key = code if code else name
+                
+                # If we haven't seen this item before, add it
+                if key not in items_by_code:
+                    items_by_code[key] = (item, item_date)
+                else:
+                    # If we have seen it, keep the latest one
+                    existing_date = items_by_code[key][1]
+                    
+                    # If new item has a date and old one doesn't, or new date is more recent
+                    if (item_date and not existing_date) or \
+                       (item_date and existing_date and item_date > existing_date):
+                        items_by_code[key] = (item, item_date)
             
-            return unique_items
+            # Get only the items, without the dates
+            latest_items = [item_tuple[0] for item_tuple in items_by_code.values()]
+            
+            st.success(f"Found {len(latest_items)} unique items with latest prices from {len(all_items)} total entries")
+            
+            return latest_items
         else:
             # Process specific sheet
             return process_receipt_sheet(file_path, sheet_name)
