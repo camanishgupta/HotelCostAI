@@ -1052,10 +1052,10 @@ def extract_abgn_recipe_costing(file_path):
                         recipe_df = df.iloc[start_idx:end_idx].copy().reset_index(drop=True)
                         
                         # Find the recipe name
-                    recipe_name = ""
-                    name_found = False
-                    
-                    # First, look for the standard name pattern in the first few rows
+                        recipe_name = ""
+                        name_found = False
+                        
+                        # First, look for the standard name pattern in the first few rows
                     for j in range(min(10, len(recipe_df))):
                         row = recipe_df.iloc[j]
                         
