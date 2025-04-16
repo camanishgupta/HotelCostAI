@@ -944,6 +944,9 @@ def extract_sales_from_excel(file_path):
         st.error(f"Error extracting sales: {str(e)}")
         return []
 
+# Note: This function has been moved to abgn_extractor.py
+# Keeping this commented out for reference
+"""
 def extract_abgn_recipe_costing(file_path):
     """
     Extract recipe data specifically from ABGN A La Carte Menu Cost format Excel files
@@ -1418,6 +1421,9 @@ def extract_abgn_recipe_costing(file_path):
         return []
 
 
+# Note: This function has been moved to abgn_extractor.py
+# Keeping this commented out for reference
+"""
 def extract_abgn_inventory(file_path):
     """
     Extract inventory data specifically from ABGN One Line Store format Excel files
@@ -1680,6 +1686,9 @@ def extract_abgn_inventory(file_path):
         return []
 
 
+# Note: This function has been moved to abgn_extractor.py
+# Keeping this commented out for reference
+"""
 def extract_abgn_sales(file_path):
     """
     Extract sales data specifically from ABGN Sales format Excel files
@@ -1946,7 +1955,9 @@ def batch_process_directory(directory):
                     # Handle special case for ABGN files
                     if 'menu cost' in file_name.lower() or 'recipe cost' in file_name.lower() or 'a la carte' in file_name.lower():
                         st.info("Detected ABGN Recipe Costing file, attempting specialized recipe extraction...")
-                        recipes = extract_abgn_recipe_costing(file_path)
+                        # Now using the function from abgn_extractor module
+                        from utils.abgn_extractor import extract_recipe_costing
+                        recipes = extract_recipe_costing(file_path)
                         if recipes:
                             st.success(f"Found {len(recipes)} recipes in {file_name} using specialized ABGN recipe costing extractor")
                             results['recipes'].extend(recipes)
@@ -1961,7 +1972,9 @@ def batch_process_directory(directory):
                     
                     elif 'sale' in file_name.lower() or 'sales' in file_name.lower():
                         st.info("Detected ABGN Sales file, attempting specialized ABGN sales extraction...")
-                        sales = extract_abgn_sales(file_path)
+                        # Now using the function from abgn_extractor module
+                        from utils.abgn_extractor import extract_sales
+                        sales = extract_sales(file_path)
                         if sales:
                             st.success(f"Found {len(sales)} sales records in {file_name}")
                             results['sales'].extend(sales)
@@ -1976,7 +1989,9 @@ def batch_process_directory(directory):
                     
                     elif 'store' in file_name.lower() or 'item receipt' in file_name.lower():
                         st.info("Detected ABGN inventory file, attempting specialized ABGN inventory extraction...")
-                        inventory = extract_abgn_inventory(file_path)
+                        # Now using the function from abgn_extractor module
+                        from utils.abgn_extractor import extract_inventory
+                        inventory = extract_inventory(file_path)
                         if inventory:
                             st.success(f"Found {len(inventory)} inventory items in {file_name}")
                             results['inventory'].extend(inventory)
