@@ -10,6 +10,8 @@ from datetime import datetime
 from utils.data_processing import load_data, save_data
 from utils.excel_extraction import safe_read_excel, detect_file_type, extract_recipes_from_excel, extract_inventory_from_excel, extract_sales_from_excel
 from utils.abgn_extractor import extract_recipe_costing, extract_inventory, extract_sales
+from improved_recipe_extractor import extract_all_recipes
+from excel_analyzer import analyze_recipe_file, analyze_inventory_file, analyze_sales_file
 
 # Set page configuration
 st.set_page_config(
@@ -100,12 +102,27 @@ def batch_process_directory(directory):
                 
                 # Specialized handling based on file types
                 if is_abgn_recipe:
-                    # Use specialized ABGN recipe extractor
-                    st.write("Detected ABGN Recipe format - using specialized extractor")
-                    extracted_data = extract_recipe_costing(file_path)
-                    if extracted_data:
-                        results['recipes'].extend(extracted_data)
-                        st.success(f"Extracted {len(extracted_data)} recipes with specialized ABGN extractor")
+                    # Use improved comprehensive recipe extractor
+                    st.write("Detected ABGN Recipe format - using improved comprehensive extractor")
+                    try:
+                        # First try using our improved comprehensive extractor
+                        extracted_data = extract_all_recipes(file_path)
+                        if extracted_data and len(extracted_data) > 0:
+                            results['recipes'].extend(extracted_data)
+                            st.success(f"Extracted {len(extracted_data)} recipes with improved comprehensive extractor")
+                        else:
+                            # Fall back to original extractor if improved one fails
+                            st.warning("Improved extractor didn't find recipes, trying original extractor")
+                            extracted_data = extract_recipe_costing(file_path)
+                            if extracted_data and len(extracted_data) > 0:
+                                results['recipes'].extend(extracted_data)
+                                st.success(f"Extracted {len(extracted_data)} recipes with original ABGN extractor")
+                    except Exception as e:
+                        st.warning(f"Improved extractor failed: {str(e)}, trying original extractor")
+                        extracted_data = extract_recipe_costing(file_path)
+                        if extracted_data:
+                            results['recipes'].extend(extracted_data)
+                            st.success(f"Extracted {len(extracted_data)} recipes with original ABGN extractor")
                         
                 elif is_abgn_inventory:
                     # Use specialized ABGN inventory extractor
@@ -322,18 +339,55 @@ with tab1:
                 
                 if extraction_type == "recipe":
                     if use_abgn:
-                        st.info("Using specialized ABGN recipe extractor")
+                        st.info("Using improved comprehensive recipe extractor")
                         try:
-                            st.session_state.extraction_results = {
-                                'type': 'recipe',
-                                'data': extract_recipe_costing(file_path)
-                            }
+                            # First try the improved comprehensive extractor
+                            extracted_data = extract_all_recipes(file_path)
+                            if extracted_data and len(extracted_data) > 0:
+                                st.session_state.extraction_results = {
+                                    'type': 'recipe',
+                                    'data': extracted_data
+                                }
+                                st.success(f"Extracted {len(extracted_data)} recipes with improved comprehensive extractor")
+                            else:
+                                # Fall back to original ABGN extractor
+                                st.warning("Improved extractor didn't find recipes, trying original ABGN extractor")
+                                extracted_data = extract_recipe_costing(file_path)
+                                if extracted_data and len(extracted_data) > 0:
+                                    st.session_state.extraction_results = {
+                                        'type': 'recipe',
+                                        'data': extracted_data
+                                    }
+                                    st.success(f"Extracted {len(extracted_data)} recipes with original ABGN extractor")
+                                else:
+                                    # Try standard extractor as last resort
+                                    st.warning("ABGN extractors failed, trying standard extractor")
+                                    st.session_state.extraction_results = {
+                                        'type': 'recipe',
+                                        'data': extract_recipes_from_excel(file_path)
+                                    }
                         except Exception as e:
-                            st.warning(f"ABGN extractor failed, using standard: {str(e)}")
-                            st.session_state.extraction_results = {
-                                'type': 'recipe',
-                                'data': extract_recipes_from_excel(file_path)
-                            }
+                            st.warning(f"Improved extractor failed: {str(e)}, trying original ABGN extractor")
+                            try:
+                                extracted_data = extract_recipe_costing(file_path)
+                                if extracted_data and len(extracted_data) > 0:
+                                    st.session_state.extraction_results = {
+                                        'type': 'recipe',
+                                        'data': extracted_data
+                                    }
+                                    st.success(f"Extracted {len(extracted_data)} recipes with original ABGN extractor")
+                                else:
+                                    st.warning("ABGN extractors failed, trying standard extractor")
+                                    st.session_state.extraction_results = {
+                                        'type': 'recipe',
+                                        'data': extract_recipes_from_excel(file_path)
+                                    }
+                            except Exception as e2:
+                                st.warning(f"ABGN extractor also failed: {str(e2)}, using standard extractor")
+                                st.session_state.extraction_results = {
+                                    'type': 'recipe',
+                                    'data': extract_recipes_from_excel(file_path)
+                                }
                     else:
                         st.session_state.extraction_results = {
                             'type': 'recipe',
